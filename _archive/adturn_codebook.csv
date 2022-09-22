@@ -1,0 +1,642 @@
+variable,question,label,freq,mean,sd
+id,Unique respondent ID,NA,582,NA,NA
+resp,Response binary,[0] Did not respond,362,NA,NA
+resp,Response binary,[1] Responded,220,NA,NA
+left_position,Did respondent leave position?,[0] Did not leave position,281,NA,NA
+left_position,Did respondent leave position?,[1] Left position,301,NA,NA
+survey_finished,Did respondent complete survey?,"[-99, NA] Missing",362,NA,NA
+survey_finished,Did respondent complete survey?,[0] Survey Incomplete,12,NA,NA
+survey_finished,Did respondent complete survey?,[1] Survey Complete,208,NA,NA
+ccmu,Unique Facility identifier,NA,582,NA,NA
+catcap,Facility capacity,"[-99, NA] Missing",0,NA,NA
+catcap,Facility capacity,[1] Small (6-24),129,NA,NA
+catcap,Facility capacity,[2] Medium (25-49),160,NA,NA
+catcap,Facility capacity,[3] Large (50-74),150,NA,NA
+catcap,Facility capacity,[4] Very Large (75+),143,NA,NA
+anymc,Does facility perform memory care?,"[-99, NA] Missing",0,NA,NA
+anymc,Does facility perform memory care?,[0] No Memory Care,346,NA,NA
+anymc,Does facility perform memory care?,[1] Memory Care,236,NA,NA
+medi,Does facility accept Medicaid?,"[-99, NA] Missing",8,NA,NA
+medi,Does facility accept Medicaid?,[0] No Medicaid,132,NA,NA
+medi,Does facility accept Medicaid?,[1] Yes Medicaid,442,NA,NA
+rural,Is facility rural?,"[-99, NA] Missing",0,NA,NA
+rural,Is facility rural?,[1] Urban,352,NA,NA
+rural,Is facility rural?,[2] Rural,204,NA,NA
+rural,Is facility rural?,[3] Frontier,26,NA,NA
+nonpro,Is facility nonprofit?,"[-99, NA] Missing",0,NA,NA
+nonpro,Is facility nonprofit?,[0] Not nonprofit,535,NA,NA
+nonpro,Is facility nonprofit?,[1] Nonprofit,47,NA,NA
+gender,Q1. What gender is the respondent?,"[-99, NA] Missing",363,NA,NA
+gender,Q1. What gender is the respondent?,[1] Male,35,NA,NA
+gender,Q1. What gender is the respondent?,[2] Female,182,NA,NA
+gender,Q1. What gender is the respondent?,[3] Prefer to self_describe,0,NA,NA
+gender,Q1. What gender is the respondent?,[4] Prefer not to answer,2,NA,NA
+age,Q2. Age of respondent?,,582,45,(11.6)
+race,Q3. Respondent's race,"[-99, NA] Missing",373,NA,NA
+race,Q3. Respondent's race,[1] American Indian or Alaskan Native,1,NA,NA
+race,Q3. Respondent's race,[2] Asian,8,NA,NA
+race,Q3. Respondent's race,[3] Black or African American,3,NA,NA
+race,Q3. Respondent's race,[4] Native Hawaiian or Other Pacific Islander,2,NA,NA
+race,Q3. Respondent's race,[5] White,183,NA,NA
+race,Q3. Respondent's race,[6] Other,6,NA,NA
+race,Q3. Respondent's race,[7] 2+ racial categories selected,6,NA,NA
+ethnicity,Q3. Respondent's ethnicity,"[-99, NA] Missing",0,NA,NA
+ethnicity,Q3. Respondent's ethnicity,[0] Not Hispanic or Latino,569,NA,NA
+ethnicity,Q3. Respondent's ethnicity,[1] Hispanic or Latino,13,NA,NA
+education,Q4. What is the highest degree or level of school you have COMPLETED?,"[-99, NA] Missing",363,NA,NA
+education,Q4. What is the highest degree or level of school you have COMPLETED?,[1] High school diploma or equivalent (such as GED),44,NA,NA
+education,Q4. What is the highest degree or level of school you have COMPLETED?,"[2] Some college credit, but not degree",67,NA,NA
+education,Q4. What is the highest degree or level of school you have COMPLETED?,"[3] Associate's degree (for example: AA, AS)",35,NA,NA
+education,Q4. What is the highest degree or level of school you have COMPLETED?,"[4] Bachelor's degree (for example: BA, BS)",60,NA,NA
+education,Q4. What is the highest degree or level of school you have COMPLETED?,"[5] Master's degree (for example: MA, MS, MEng, MSW, MBA)",12,NA,NA
+education,Q4. What is the highest degree or level of school you have COMPLETED?,"[6] Professional degree beyond a Bachelor's Degree (for example: MD, JD)",0,NA,NA
+education,Q4. What is the highest degree or level of school you have COMPLETED?,"[7] Doctorate degree (for example: PhD, EdD)",1,NA,NA
+degree_1,Q5. Did any of your degrees include curriculum or course content related to the following subject areas?: Aging or Older Adults,"[-99, NA] Missing",426,NA,NA
+degree_1,Q5. Did any of your degrees include curriculum or course content related to the following subject areas?: Aging or Older Adults,[0] No,90,NA,NA
+degree_1,Q5. Did any of your degrees include curriculum or course content related to the following subject areas?: Aging or Older Adults,[1] Yes,66,NA,NA
+degree_2,Q5. Did any of your degrees include curriculum or course content related to the following subject areas?: Disabilities,"[-99, NA] Missing",432,NA,NA
+degree_2,Q5. Did any of your degrees include curriculum or course content related to the following subject areas?: Disabilities,[0] No,91,NA,NA
+degree_2,Q5. Did any of your degrees include curriculum or course content related to the following subject areas?: Disabilities,[1] Yes,59,NA,NA
+degree_3,Q5. Did any of your degrees include curriculum or course content related to the following subject areas?: Behavioral or mental health,"[-99, NA] Missing",429,NA,NA
+degree_3,Q5. Did any of your degrees include curriculum or course content related to the following subject areas?: Behavioral or mental health,[0] No,86,NA,NA
+degree_3,Q5. Did any of your degrees include curriculum or course content related to the following subject areas?: Behavioral or mental health,[1] Yes,67,NA,NA
+degree_4,Q5. Did any of your degrees include curriculum or course content related to the following subject areas?: Long-term services and supports,"[-99, NA] Missing",433,NA,NA
+degree_4,Q5. Did any of your degrees include curriculum or course content related to the following subject areas?: Long-term services and supports,[0] No,94,NA,NA
+degree_4,Q5. Did any of your degrees include curriculum or course content related to the following subject areas?: Long-term services and supports,[1] Yes,55,NA,NA
+degree_5,Q5. Did any of your degrees include curriculum or course content related to the following subject areas?: Healthcare administration,"[-99, NA] Missing",429,NA,NA
+degree_5,Q5. Did any of your degrees include curriculum or course content related to the following subject areas?: Healthcare administration,[0] No,91,NA,NA
+degree_5,Q5. Did any of your degrees include curriculum or course content related to the following subject areas?: Healthcare administration,[1] Yes,62,NA,NA
+cert_1,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Nursing home administrator,"[-99, NA] Missing",413,NA,NA
+cert_1,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Nursing home administrator,"[1] No, never",123,NA,NA
+cert_1,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Nursing home administrator,"[2] Yes, previously",4,NA,NA
+cert_1,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Nursing home administrator,"[3] Yes, currently",42,NA,NA
+cert_2,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Registered nurse (RN),"[-99, NA] Missing",429,NA,NA
+cert_2,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Registered nurse (RN),"[1] No, never",147,NA,NA
+cert_2,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Registered nurse (RN),"[2] Yes, previously",1,NA,NA
+cert_2,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Registered nurse (RN),"[3] Yes, currently",5,NA,NA
+cert_3,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Licensed practical/vocational nurse (LPN/LVN),"[-99, NA] Missing",428,NA,NA
+cert_3,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Licensed practical/vocational nurse (LPN/LVN),"[1] No, never",144,NA,NA
+cert_3,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Licensed practical/vocational nurse (LPN/LVN),"[2] Yes, previously",3,NA,NA
+cert_3,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Licensed practical/vocational nurse (LPN/LVN),"[3] Yes, currently",7,NA,NA
+cert_4,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Certified nursing assistant (CNA),"[-99, NA] Missing",411,NA,NA
+cert_4,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Certified nursing assistant (CNA),"[1] No, never",119,NA,NA
+cert_4,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Certified nursing assistant (CNA),"[2] Yes, previously",46,NA,NA
+cert_4,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Certified nursing assistant (CNA),"[3] Yes, currently",6,NA,NA
+cert_5,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Certified medication aide (CMA),"[-99, NA] Missing",432,NA,NA
+cert_5,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Certified medication aide (CMA),"[1] No, never",135,NA,NA
+cert_5,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Certified medication aide (CMA),"[2] Yes, previously",13,NA,NA
+cert_5,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Certified medication aide (CMA),"[3] Yes, currently",2,NA,NA
+cert_6,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Other certification,"[-99, NA] Missing",467,NA,NA
+cert_6,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Other certification,"[1] No, never",49,NA,NA
+cert_6,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Other certification,"[2] Yes, previously",20,NA,NA
+cert_6,Q6. Do you currently have or have you ever had any of the following certifications or licenses: Other certification,"[3] Yes, currently",46,NA,NA
+lca_year,Q7. In what year did you last attend the state-approved 40-hour training offered by Leading Age Oregon or Oregon Health Care Association (OHCA)?,"[-99, NA] Missing",363,NA,NA
+lca_year,Q7. In what year did you last attend the state-approved 40-hour training offered by Leading Age Oregon or Oregon Health Care Association (OHCA)?,[1] 2017 or before,123,NA,NA
+lca_year,Q7. In what year did you last attend the state-approved 40-hour training offered by Leading Age Oregon or Oregon Health Care Association (OHCA)?,[2] 2018,27,NA,NA
+lca_year,Q7. In what year did you last attend the state-approved 40-hour training offered by Leading Age Oregon or Oregon Health Care Association (OHCA)?,[3] 2019,50,NA,NA
+lca_year,Q7. In what year did you last attend the state-approved 40-hour training offered by Leading Age Oregon or Oregon Health Care Association (OHCA)?,[4] 2020,19,NA,NA
+trainsat_1,"Q8. How satisfied were you about the different subjects covered in the training program that you attended: Rules and regulations (e.g., health, fire)","[-99, NA] Missing",363,NA,NA
+trainsat_1,"Q8. How satisfied were you about the different subjects covered in the training program that you attended: Rules and regulations (e.g., health, fire)",[1] Very dissatisfied,11,NA,NA
+trainsat_1,"Q8. How satisfied were you about the different subjects covered in the training program that you attended: Rules and regulations (e.g., health, fire)",[2] Dissatisfied,4,NA,NA
+trainsat_1,"Q8. How satisfied were you about the different subjects covered in the training program that you attended: Rules and regulations (e.g., health, fire)",[3] Neither satisfied nor dissatisfied,23,NA,NA
+trainsat_1,"Q8. How satisfied were you about the different subjects covered in the training program that you attended: Rules and regulations (e.g., health, fire)",[4] Satisfied,106,NA,NA
+trainsat_1,"Q8. How satisfied were you about the different subjects covered in the training program that you attended: Rules and regulations (e.g., health, fire)",[5] Very satisfied,75,NA,NA
+trainsat_2,"Q8. How satisfied were you about the different subjects covered in the training program that you attended: Finance, accounting","[-99, NA] Missing",363,NA,NA
+trainsat_2,"Q8. How satisfied were you about the different subjects covered in the training program that you attended: Finance, accounting",[1] Very dissatisfied,5,NA,NA
+trainsat_2,"Q8. How satisfied were you about the different subjects covered in the training program that you attended: Finance, accounting",[2] Dissatisfied,24,NA,NA
+trainsat_2,"Q8. How satisfied were you about the different subjects covered in the training program that you attended: Finance, accounting",[3] Neither satisfied nor dissatisfied,84,NA,NA
+trainsat_2,"Q8. How satisfied were you about the different subjects covered in the training program that you attended: Finance, accounting",[4] Satisfied,73,NA,NA
+trainsat_2,"Q8. How satisfied were you about the different subjects covered in the training program that you attended: Finance, accounting",[5] Very satisfied,33,NA,NA
+trainsat_3,Q8. How satisfied were you about the different subjects covered in the training program that you attended: Human resources and staffing,"[-99, NA] Missing",364,NA,NA
+trainsat_3,Q8. How satisfied were you about the different subjects covered in the training program that you attended: Human resources and staffing,[1] Very dissatisfied,4,NA,NA
+trainsat_3,Q8. How satisfied were you about the different subjects covered in the training program that you attended: Human resources and staffing,[2] Dissatisfied,22,NA,NA
+trainsat_3,Q8. How satisfied were you about the different subjects covered in the training program that you attended: Human resources and staffing,[3] Neither satisfied nor dissatisfied,68,NA,NA
+trainsat_3,Q8. How satisfied were you about the different subjects covered in the training program that you attended: Human resources and staffing,[4] Satisfied,88,NA,NA
+trainsat_3,Q8. How satisfied were you about the different subjects covered in the training program that you attended: Human resources and staffing,[5] Very satisfied,36,NA,NA
+trainsat_4,"Q8. How satisfied were you about the different subjects covered in the training program that you attended: Physical environment (e.g., building/plant management)","[-99, NA] Missing",363,NA,NA
+trainsat_4,"Q8. How satisfied were you about the different subjects covered in the training program that you attended: Physical environment (e.g., building/plant management)",[1] Very dissatisfied,5,NA,NA
+trainsat_4,"Q8. How satisfied were you about the different subjects covered in the training program that you attended: Physical environment (e.g., building/plant management)",[2] Dissatisfied,15,NA,NA
+trainsat_4,"Q8. How satisfied were you about the different subjects covered in the training program that you attended: Physical environment (e.g., building/plant management)",[3] Neither satisfied nor dissatisfied,55,NA,NA
+trainsat_4,"Q8. How satisfied were you about the different subjects covered in the training program that you attended: Physical environment (e.g., building/plant management)",[4] Satisfied,104,NA,NA
+trainsat_4,"Q8. How satisfied were you about the different subjects covered in the training program that you attended: Physical environment (e.g., building/plant management)",[5] Very satisfied,40,NA,NA
+trainsat_5,Q8. How satisfied were you about the different subjects covered in the training program that you attended: Leadership skills,"[-99, NA] Missing",364,NA,NA
+trainsat_5,Q8. How satisfied were you about the different subjects covered in the training program that you attended: Leadership skills,[1] Very dissatisfied,6,NA,NA
+trainsat_5,Q8. How satisfied were you about the different subjects covered in the training program that you attended: Leadership skills,[2] Dissatisfied,13,NA,NA
+trainsat_5,Q8. How satisfied were you about the different subjects covered in the training program that you attended: Leadership skills,[3] Neither satisfied nor dissatisfied,61,NA,NA
+trainsat_5,Q8. How satisfied were you about the different subjects covered in the training program that you attended: Leadership skills,[4] Satisfied,97,NA,NA
+trainsat_5,Q8. How satisfied were you about the different subjects covered in the training program that you attended: Leadership skills,[5] Very satisfied,41,NA,NA
+trainagree_1,Q9. Do you agree or disagree with the following statements?: My training sufficiently prepared me for this position.,"[-99, NA] Missing",363,NA,NA
+trainagree_1,Q9. Do you agree or disagree with the following statements?: My training sufficiently prepared me for this position.,[1] Strongly disagree,6,NA,NA
+trainagree_1,Q9. Do you agree or disagree with the following statements?: My training sufficiently prepared me for this position.,[2] Disagree,30,NA,NA
+trainagree_1,Q9. Do you agree or disagree with the following statements?: My training sufficiently prepared me for this position.,[3] Neither agree nor disagree,63,NA,NA
+trainagree_1,Q9. Do you agree or disagree with the following statements?: My training sufficiently prepared me for this position.,[4] Agree,88,NA,NA
+trainagree_1,Q9. Do you agree or disagree with the following statements?: My training sufficiently prepared me for this position.,[5] Strongly agree,32,NA,NA
+trainagree_2,"Q9. Do you agree or disagree with the following statements?: I received sufficient onboarding support (e.g., mentorship) when I started this position.","[-99, NA] Missing",363,NA,NA
+trainagree_2,"Q9. Do you agree or disagree with the following statements?: I received sufficient onboarding support (e.g., mentorship) when I started this position.",[1] Strongly disagree,10,NA,NA
+trainagree_2,"Q9. Do you agree or disagree with the following statements?: I received sufficient onboarding support (e.g., mentorship) when I started this position.",[2] Disagree,38,NA,NA
+trainagree_2,"Q9. Do you agree or disagree with the following statements?: I received sufficient onboarding support (e.g., mentorship) when I started this position.",[3] Neither agree nor disagree,42,NA,NA
+trainagree_2,"Q9. Do you agree or disagree with the following statements?: I received sufficient onboarding support (e.g., mentorship) when I started this position.",[4] Agree,78,NA,NA
+trainagree_2,"Q9. Do you agree or disagree with the following statements?: I received sufficient onboarding support (e.g., mentorship) when I started this position.",[5] Strongly agree,51,NA,NA
+trainagree_3,Q9. Do you agree or disagree with the following statements?: There are sufficient ongoing training opportunities for me.,"[-99, NA] Missing",363,NA,NA
+trainagree_3,Q9. Do you agree or disagree with the following statements?: There are sufficient ongoing training opportunities for me.,[1] Strongly disagree,7,NA,NA
+trainagree_3,Q9. Do you agree or disagree with the following statements?: There are sufficient ongoing training opportunities for me.,[2] Disagree,12,NA,NA
+trainagree_3,Q9. Do you agree or disagree with the following statements?: There are sufficient ongoing training opportunities for me.,[3] Neither agree nor disagree,31,NA,NA
+trainagree_3,Q9. Do you agree or disagree with the following statements?: There are sufficient ongoing training opportunities for me.,[4] Agree,101,NA,NA
+trainagree_3,Q9. Do you agree or disagree with the following statements?: There are sufficient ongoing training opportunities for me.,[5] Strongly agree,68,NA,NA
+trainagree_4,Q9. Do you agree or disagree with the following statements?: The existing opportunities for continuing education are relevant to my work.,"[-99, NA] Missing",363,NA,NA
+trainagree_4,Q9. Do you agree or disagree with the following statements?: The existing opportunities for continuing education are relevant to my work.,[1] Strongly disagree,5,NA,NA
+trainagree_4,Q9. Do you agree or disagree with the following statements?: The existing opportunities for continuing education are relevant to my work.,[2] Disagree,9,NA,NA
+trainagree_4,Q9. Do you agree or disagree with the following statements?: The existing opportunities for continuing education are relevant to my work.,[3] Neither agree nor disagree,26,NA,NA
+trainagree_4,Q9. Do you agree or disagree with the following statements?: The existing opportunities for continuing education are relevant to my work.,[4] Agree,119,NA,NA
+trainagree_4,Q9. Do you agree or disagree with the following statements?: The existing opportunities for continuing education are relevant to my work.,[5] Strongly agree,60,NA,NA
+trainagree_5,"Q9. Do you agree or disagree with the following statements?: My employer makes it possible for me to attend training (e.g., paid time for training).","[-99, NA] Missing",363,NA,NA
+trainagree_5,"Q9. Do you agree or disagree with the following statements?: My employer makes it possible for me to attend training (e.g., paid time for training).",[1] Strongly disagree,5,NA,NA
+trainagree_5,"Q9. Do you agree or disagree with the following statements?: My employer makes it possible for me to attend training (e.g., paid time for training).",[2] Disagree,3,NA,NA
+trainagree_5,"Q9. Do you agree or disagree with the following statements?: My employer makes it possible for me to attend training (e.g., paid time for training).",[3] Neither agree nor disagree,23,NA,NA
+trainagree_5,"Q9. Do you agree or disagree with the following statements?: My employer makes it possible for me to attend training (e.g., paid time for training).",[4] Agree,84,NA,NA
+trainagree_5,"Q9. Do you agree or disagree with the following statements?: My employer makes it possible for me to attend training (e.g., paid time for training).",[5] Strongly agree,104,NA,NA
+famown,Q10a. Do you or a member of your immediate family have partial or full ownership of this community?,"[-99, NA] Missing",363,NA,NA
+famown,Q10a. Do you or a member of your immediate family have partial or full ownership of this community?,[0] No,204,NA,NA
+famown,Q10a. Do you or a member of your immediate family have partial or full ownership of this community?,[1] Yes,15,NA,NA
+adten,Q11. How long have you been an administrator at this community? Please enter in years.,,582,4.1,(4.8)
+priorpos,Q12. Have you worked in any other position at this community prior to becoming an administrator?,"[-99, NA] Missing",363,NA,NA
+priorpos,Q12. Have you worked in any other position at this community prior to becoming an administrator?,[0] No,122,NA,NA
+priorpos,Q12. Have you worked in any other position at this community prior to becoming an administrator?,[1] Yes,97,NA,NA
+prevadmin,"Q13. Have you ever been an administrator at another assisted living, residential care, or memory care
+community? Please select all that apply.","[-99, NA] Missing",363,NA,NA
+prevadmin,"Q13. Have you ever been an administrator at another assisted living, residential care, or memory care
+community? Please select all that apply.",[1] Assisted living/residential care (not endorsed for memory care),33,NA,NA
+prevadmin,"Q13. Have you ever been an administrator at another assisted living, residential care, or memory care
+community? Please select all that apply.",[2] Memory care community,27,NA,NA
+prevadmin,"Q13. Have you ever been an administrator at another assisted living, residential care, or memory care
+community? Please select all that apply.",[3] Assisted living/residential care (not endorsed for memory care) & Memory care community,51,NA,NA
+prevadmin,"Q13. Have you ever been an administrator at another assisted living, residential care, or memory care
+community? Please select all that apply.","[4] No, this is the first community of which I am the administrator.",108,NA,NA
+reasonleave,Q14. What was the reason for leaving your administrator position at that last community?,"[-99, NA] Missing",472,NA,NA
+reasonleave,Q14. What was the reason for leaving your administrator position at that last community?,[1] I transferred to this community in the same organization,25,NA,NA
+reasonleave,Q14. What was the reason for leaving your administrator position at that last community?,[2] I quit,35,NA,NA
+reasonleave,Q14. What was the reason for leaving your administrator position at that last community?,[3] I was laid off,5,NA,NA
+reasonleave,Q14. What was the reason for leaving your administrator position at that last community?,[4] It closed,0,NA,NA
+reasonleave,Q14. What was the reason for leaving your administrator position at that last community?,[5] Other,45,NA,NA
+everwork_1,Q15. Have you ever worked in any of the following settings prior to your current job?: Adult foster/care home,"[-99, NA] Missing",387,NA,NA
+everwork_1,Q15. Have you ever worked in any of the following settings prior to your current job?: Adult foster/care home,[0] No,138,NA,NA
+everwork_1,Q15. Have you ever worked in any of the following settings prior to your current job?: Adult foster/care home,[1] Yes,57,NA,NA
+everwork_2,Q15. Have you ever worked in any of the following settings prior to your current job?: Nursing home,"[-99, NA] Missing",385,NA,NA
+everwork_2,Q15. Have you ever worked in any of the following settings prior to your current job?: Nursing home,[0] No,105,NA,NA
+everwork_2,Q15. Have you ever worked in any of the following settings prior to your current job?: Nursing home,[1] Yes,92,NA,NA
+everwork_3,Q15. Have you ever worked in any of the following settings prior to your current job?: Home health agency (including hospice agency),"[-99, NA] Missing",397,NA,NA
+everwork_3,Q15. Have you ever worked in any of the following settings prior to your current job?: Home health agency (including hospice agency),[0] No,152,NA,NA
+everwork_3,Q15. Have you ever worked in any of the following settings prior to your current job?: Home health agency (including hospice agency),[1] Yes,33,NA,NA
+everwork_4,Q15. Have you ever worked in any of the following settings prior to your current job?: Home care,"[-99, NA] Missing",392,NA,NA
+everwork_4,Q15. Have you ever worked in any of the following settings prior to your current job?: Home care,[0] No,131,NA,NA
+everwork_4,Q15. Have you ever worked in any of the following settings prior to your current job?: Home care,[1] Yes,59,NA,NA
+everwork_5,Q15. Have you ever worked in any of the following settings prior to your current job?: Hospital,"[-99, NA] Missing",395,NA,NA
+everwork_5,Q15. Have you ever worked in any of the following settings prior to your current job?: Hospital,[0] No,154,NA,NA
+everwork_5,Q15. Have you ever worked in any of the following settings prior to your current job?: Hospital,[1] Yes,33,NA,NA
+everwork_6,Q15. Have you ever worked in any of the following settings prior to your current job?: Adult day care,"[-99, NA] Missing",400,NA,NA
+everwork_6,Q15. Have you ever worked in any of the following settings prior to your current job?: Adult day care,[0] No,170,NA,NA
+everwork_6,Q15. Have you ever worked in any of the following settings prior to your current job?: Adult day care,[1] Yes,12,NA,NA
+everwork_7,Q15. Have you ever worked in any of the following settings prior to your current job?: Other,"[-99, NA] Missing",444,NA,NA
+everwork_7,Q15. Have you ever worked in any of the following settings prior to your current job?: Other,[0] No,83,NA,NA
+everwork_7,Q15. Have you ever worked in any of the following settings prior to your current job?: Other,[1] Yes,55,NA,NA
+howlong,"Q16. Considering your past work experience, how long have you worked in the long-term care or health settings listed above in total? Please include all prior jobs, even if you left and then came back. Please enter in years.",,582,17.1,(9.7)
+salary,Q17. What is your current annual salary in your position as an administrator?,"[-99, NA] Missing",363,NA,NA
+salary,Q17. What is your current annual salary in your position as an administrator?,"[1] Less than or equal to $24,999",0,NA,NA
+salary,Q17. What is your current annual salary in your position as an administrator?,"[2] $25,000 to $49,999",31,NA,NA
+salary,Q17. What is your current annual salary in your position as an administrator?,"[3] $50,000 to $74,999",62,NA,NA
+salary,Q17. What is your current annual salary in your position as an administrator?,"[4] $75,000 to $99,999",91,NA,NA
+salary,Q17. What is your current annual salary in your position as an administrator?,"[5] $100,000 or greater",24,NA,NA
+salary,Q17. What is your current annual salary in your position as an administrator?,[6] Prefer not to answer,10,NA,NA
+salary,Q17. What is your current annual salary in your position as an administrator?,[7] Other,1,NA,NA
+benefits_1,Q18. Which of the following fringe benefits does your current employer offer to you?: Health insurance for you,"[-99, NA] Missing",366,NA,NA
+benefits_1,Q18. Which of the following fringe benefits does your current employer offer to you?: Health insurance for you,[0] No,18,NA,NA
+benefits_1,Q18. Which of the following fringe benefits does your current employer offer to you?: Health insurance for you,[1] Yes,198,NA,NA
+benefits_2,Q18. Which of the following fringe benefits does your current employer offer to you?: Health insurance that includes family coverage,"[-99, NA] Missing",375,NA,NA
+benefits_2,Q18. Which of the following fringe benefits does your current employer offer to you?: Health insurance that includes family coverage,[0] No,41,NA,NA
+benefits_2,Q18. Which of the following fringe benefits does your current employer offer to you?: Health insurance that includes family coverage,[1] Yes,166,NA,NA
+benefits_3,Q18. Which of the following fringe benefits does your current employer offer to you?: Paid personal time off or vacation time,"[-99, NA] Missing",364,NA,NA
+benefits_3,Q18. Which of the following fringe benefits does your current employer offer to you?: Paid personal time off or vacation time,[0] No,5,NA,NA
+benefits_3,Q18. Which of the following fringe benefits does your current employer offer to you?: Paid personal time off or vacation time,[1] Yes,213,NA,NA
+benefits_4,Q18. Which of the following fringe benefits does your current employer offer to you?: Paid sick leave,"[-99, NA] Missing",368,NA,NA
+benefits_4,Q18. Which of the following fringe benefits does your current employer offer to you?: Paid sick leave,[0] No,15,NA,NA
+benefits_4,Q18. Which of the following fringe benefits does your current employer offer to you?: Paid sick leave,[1] Yes,199,NA,NA
+benefits_5,Q18. Which of the following fringe benefits does your current employer offer to you?: Paid holidays,"[-99, NA] Missing",366,NA,NA
+benefits_5,Q18. Which of the following fringe benefits does your current employer offer to you?: Paid holidays,[0] No,22,NA,NA
+benefits_5,Q18. Which of the following fringe benefits does your current employer offer to you?: Paid holidays,[1] Yes,194,NA,NA
+benefits_6,Q18. Which of the following fringe benefits does your current employer offer to you?: Pension,"[-99, NA] Missing",420,NA,NA
+benefits_6,Q18. Which of the following fringe benefits does your current employer offer to you?: Pension,[0] No,145,NA,NA
+benefits_6,Q18. Which of the following fringe benefits does your current employer offer to you?: Pension,[1] Yes,17,NA,NA
+benefits_7,Q18. Which of the following fringe benefits does your current employer offer to you?: A 401(k) or 403(b) account,"[-99, NA] Missing",371,NA,NA
+benefits_7,Q18. Which of the following fringe benefits does your current employer offer to you?: A 401(k) or 403(b) account,[0] No,44,NA,NA
+benefits_7,Q18. Which of the following fringe benefits does your current employer offer to you?: A 401(k) or 403(b) account,[1] Yes,167,NA,NA
+benefits_8,Q18. Which of the following fringe benefits does your current employer offer to you?: Life insurance,"[-99, NA] Missing",374,NA,NA
+benefits_8,Q18. Which of the following fringe benefits does your current employer offer to you?: Life insurance,[0] No,51,NA,NA
+benefits_8,Q18. Which of the following fringe benefits does your current employer offer to you?: Life insurance,[1] Yes,157,NA,NA
+benefits_9,"Q18. Which of the following fringe benefits does your current employer offer to you?: Bonus or incentive pay for (e.g., census/occupancy, incident reports).","[-99, NA] Missing",403,NA,NA
+benefits_9,"Q18. Which of the following fringe benefits does your current employer offer to you?: Bonus or incentive pay for (e.g., census/occupancy, incident reports).",[0] No,78,NA,NA
+benefits_9,"Q18. Which of the following fringe benefits does your current employer offer to you?: Bonus or incentive pay for (e.g., census/occupancy, incident reports).",[1] Yes,101,NA,NA
+jobsat_1,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of job security I have.,"[-99, NA] Missing",367,NA,NA
+jobsat_1,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of job security I have.,[0] Not applicable,1,NA,NA
+jobsat_1,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of job security I have.,[1] Very dissatisfied,1,NA,NA
+jobsat_1,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of job security I have.,[2] Dissatisfied,10,NA,NA
+jobsat_1,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of job security I have.,[3] Neither satisfied nor dissatisfied,25,NA,NA
+jobsat_1,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of job security I have.,[4] Satisfied,89,NA,NA
+jobsat_1,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of job security I have.,[5] Very satisfied,89,NA,NA
+jobsat_2,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of pay and fringe benefits
+I receive.","[-99, NA] Missing",368,NA,NA
+jobsat_2,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of pay and fringe benefits
+I receive.",[0] Not applicable,2,NA,NA
+jobsat_2,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of pay and fringe benefits
+I receive.",[1] Very dissatisfied,3,NA,NA
+jobsat_2,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of pay and fringe benefits
+I receive.",[2] Dissatisfied,37,NA,NA
+jobsat_2,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of pay and fringe benefits
+I receive.",[3] Neither satisfied nor dissatisfied,33,NA,NA
+jobsat_2,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of pay and fringe benefits
+I receive.",[4] Satisfied,89,NA,NA
+jobsat_2,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of pay and fringe benefits
+I receive.",[5] Very satisfied,50,NA,NA
+jobsat_3,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of personal growth and
+development I get in doing my job.","[-99, NA] Missing",367,NA,NA
+jobsat_3,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of personal growth and
+development I get in doing my job.",[0] Not applicable,1,NA,NA
+jobsat_3,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of personal growth and
+development I get in doing my job.",[1] Very dissatisfied,1,NA,NA
+jobsat_3,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of personal growth and
+development I get in doing my job.",[2] Dissatisfied,11,NA,NA
+jobsat_3,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of personal growth and
+development I get in doing my job.",[3] Neither satisfied nor dissatisfied,31,NA,NA
+jobsat_3,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of personal growth and
+development I get in doing my job.",[4] Satisfied,97,NA,NA
+jobsat_3,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of personal growth and
+development I get in doing my job.",[5] Very satisfied,74,NA,NA
+jobsat_4,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The people I talk to and work with on
+my job.","[-99, NA] Missing",367,NA,NA
+jobsat_4,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The people I talk to and work with on
+my job.",[0] Not applicable,0,NA,NA
+jobsat_4,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The people I talk to and work with on
+my job.",[1] Very dissatisfied,0,NA,NA
+jobsat_4,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The people I talk to and work with on
+my job.",[2] Dissatisfied,4,NA,NA
+jobsat_4,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The people I talk to and work with on
+my job.",[3] Neither satisfied nor dissatisfied,16,NA,NA
+jobsat_4,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The people I talk to and work with on
+my job.",[4] Satisfied,81,NA,NA
+jobsat_4,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The people I talk to and work with on
+my job.",[5] Very satisfied,114,NA,NA
+jobsat_5,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The degree of respect and fair
+treatment I receive from my boss.","[-99, NA] Missing",367,NA,NA
+jobsat_5,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The degree of respect and fair
+treatment I receive from my boss.",[0] Not applicable,7,NA,NA
+jobsat_5,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The degree of respect and fair
+treatment I receive from my boss.",[1] Very dissatisfied,4,NA,NA
+jobsat_5,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The degree of respect and fair
+treatment I receive from my boss.",[2] Dissatisfied,10,NA,NA
+jobsat_5,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The degree of respect and fair
+treatment I receive from my boss.",[3] Neither satisfied nor dissatisfied,24,NA,NA
+jobsat_5,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The degree of respect and fair
+treatment I receive from my boss.",[4] Satisfied,63,NA,NA
+jobsat_5,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The degree of respect and fair
+treatment I receive from my boss.",[5] Very satisfied,107,NA,NA
+jobsat_6,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The feeling of worthwhile
+accomplishment I get from doing my job.","[-99, NA] Missing",367,NA,NA
+jobsat_6,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The feeling of worthwhile
+accomplishment I get from doing my job.",[0] Not applicable,0,NA,NA
+jobsat_6,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The feeling of worthwhile
+accomplishment I get from doing my job.",[1] Very dissatisfied,1,NA,NA
+jobsat_6,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The feeling of worthwhile
+accomplishment I get from doing my job.",[2] Dissatisfied,6,NA,NA
+jobsat_6,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The feeling of worthwhile
+accomplishment I get from doing my job.",[3] Neither satisfied nor dissatisfied,14,NA,NA
+jobsat_6,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The feeling of worthwhile
+accomplishment I get from doing my job.",[4] Satisfied,79,NA,NA
+jobsat_6,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The feeling of worthwhile
+accomplishment I get from doing my job.",[5] Very satisfied,115,NA,NA
+jobsat_7,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The chance to get to know other
+people while on the job.","[-99, NA] Missing",368,NA,NA
+jobsat_7,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The chance to get to know other
+people while on the job.",[0] Not applicable,0,NA,NA
+jobsat_7,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The chance to get to know other
+people while on the job.",[1] Very dissatisfied,1,NA,NA
+jobsat_7,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The chance to get to know other
+people while on the job.",[2] Dissatisfied,4,NA,NA
+jobsat_7,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The chance to get to know other
+people while on the job.",[3] Neither satisfied nor dissatisfied,15,NA,NA
+jobsat_7,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The chance to get to know other
+people while on the job.",[4] Satisfied,86,NA,NA
+jobsat_7,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The chance to get to know other
+people while on the job.",[5] Very satisfied,108,NA,NA
+jobsat_8,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of support and guidance I
+receive from my supervisor.","[-99, NA] Missing",367,NA,NA
+jobsat_8,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of support and guidance I
+receive from my supervisor.",[0] Not applicable,10,NA,NA
+jobsat_8,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of support and guidance I
+receive from my supervisor.",[1] Very dissatisfied,7,NA,NA
+jobsat_8,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of support and guidance I
+receive from my supervisor.",[2] Dissatisfied,16,NA,NA
+jobsat_8,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of support and guidance I
+receive from my supervisor.",[3] Neither satisfied nor dissatisfied,29,NA,NA
+jobsat_8,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of support and guidance I
+receive from my supervisor.",[4] Satisfied,67,NA,NA
+jobsat_8,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of support and guidance I
+receive from my supervisor.",[5] Very satisfied,86,NA,NA
+jobsat_9,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The degree to which I am fairly paid for what I contribute to this organization.,"[-99, NA] Missing",368,NA,NA
+jobsat_9,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The degree to which I am fairly paid for what I contribute to this organization.,[0] Not applicable,1,NA,NA
+jobsat_9,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The degree to which I am fairly paid for what I contribute to this organization.,[1] Very dissatisfied,10,NA,NA
+jobsat_9,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The degree to which I am fairly paid for what I contribute to this organization.,[2] Dissatisfied,23,NA,NA
+jobsat_9,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The degree to which I am fairly paid for what I contribute to this organization.,[3] Neither satisfied nor dissatisfied,33,NA,NA
+jobsat_9,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The degree to which I am fairly paid for what I contribute to this organization.,[4] Satisfied,92,NA,NA
+jobsat_9,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The degree to which I am fairly paid for what I contribute to this organization.,[5] Very satisfied,55,NA,NA
+jobsat_10,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of independent thought
+and action I can exercise in my job.","[-99, NA] Missing",368,NA,NA
+jobsat_10,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of independent thought
+and action I can exercise in my job.",[0] Not applicable,0,NA,NA
+jobsat_10,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of independent thought
+and action I can exercise in my job.",[1] Very dissatisfied,2,NA,NA
+jobsat_10,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of independent thought
+and action I can exercise in my job.",[2] Dissatisfied,7,NA,NA
+jobsat_10,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of independent thought
+and action I can exercise in my job.",[3] Neither satisfied nor dissatisfied,18,NA,NA
+jobsat_10,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of independent thought
+and action I can exercise in my job.",[4] Satisfied,89,NA,NA
+jobsat_10,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of independent thought
+and action I can exercise in my job.",[5] Very satisfied,98,NA,NA
+jobsat_11,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: How secure things look for me in the
+future in this organization.","[-99, NA] Missing",367,NA,NA
+jobsat_11,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: How secure things look for me in the
+future in this organization.",[0] Not applicable,0,NA,NA
+jobsat_11,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: How secure things look for me in the
+future in this organization.",[1] Very dissatisfied,1,NA,NA
+jobsat_11,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: How secure things look for me in the
+future in this organization.",[2] Dissatisfied,17,NA,NA
+jobsat_11,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: How secure things look for me in the
+future in this organization.",[3] Neither satisfied nor dissatisfied,30,NA,NA
+jobsat_11,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: How secure things look for me in the
+future in this organization.",[4] Satisfied,93,NA,NA
+jobsat_11,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: How secure things look for me in the
+future in this organization.",[5] Very satisfied,74,NA,NA
+jobsat_12,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The chance to help other people while
+at work.","[-99, NA] Missing",367,NA,NA
+jobsat_12,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The chance to help other people while
+at work.",[0] Not applicable,0,NA,NA
+jobsat_12,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The chance to help other people while
+at work.",[1] Very dissatisfied,0,NA,NA
+jobsat_12,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The chance to help other people while
+at work.",[2] Dissatisfied,1,NA,NA
+jobsat_12,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The chance to help other people while
+at work.",[3] Neither satisfied nor dissatisfied,9,NA,NA
+jobsat_12,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The chance to help other people while
+at work.",[4] Satisfied,79,NA,NA
+jobsat_12,"Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The chance to help other people while
+at work.",[5] Very satisfied,126,NA,NA
+jobsat_13,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of challenges in my job.,"[-99, NA] Missing",368,NA,NA
+jobsat_13,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of challenges in my job.,[0] Not applicable,0,NA,NA
+jobsat_13,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of challenges in my job.,[1] Very dissatisfied,3,NA,NA
+jobsat_13,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of challenges in my job.,[2] Dissatisfied,15,NA,NA
+jobsat_13,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of challenges in my job.,[3] Neither satisfied nor dissatisfied,28,NA,NA
+jobsat_13,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of challenges in my job.,[4] Satisfied,78,NA,NA
+jobsat_13,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of challenges in my job.,[5] Very satisfied,90,NA,NA
+jobsat_14,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The overall quality of the supervision I receive in my work.,"[-99, NA] Missing",368,NA,NA
+jobsat_14,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The overall quality of the supervision I receive in my work.,[0] Not applicable,5,NA,NA
+jobsat_14,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The overall quality of the supervision I receive in my work.,[1] Very dissatisfied,2,NA,NA
+jobsat_14,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The overall quality of the supervision I receive in my work.,[2] Dissatisfied,14,NA,NA
+jobsat_14,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The overall quality of the supervision I receive in my work.,[3] Neither satisfied nor dissatisfied,36,NA,NA
+jobsat_14,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The overall quality of the supervision I receive in my work.,[4] Satisfied,82,NA,NA
+jobsat_14,Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The overall quality of the supervision I receive in my work.,[5] Very satisfied,75,NA,NA
+jobagree_1,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I feel a strong sense of 'belonging' to my organization.","[-99, NA] Missing",363,NA,NA
+jobagree_1,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I feel a strong sense of 'belonging' to my organization.",[1] Strongly disagree,1,NA,NA
+jobagree_1,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I feel a strong sense of 'belonging' to my organization.",[2] Disagree,9,NA,NA
+jobagree_1,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I feel a strong sense of 'belonging' to my organization.",[3] Neither agree nor disagree,26,NA,NA
+jobagree_1,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I feel a strong sense of 'belonging' to my organization.",[4] Agree,94,NA,NA
+jobagree_1,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I feel a strong sense of 'belonging' to my organization.",[5] Strongly agree,89,NA,NA
+jobagree_2,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: My organization really cares about my wellbeing.","[-99, NA] Missing",363,NA,NA
+jobagree_2,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: My organization really cares about my wellbeing.",[1] Strongly disagree,1,NA,NA
+jobagree_2,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: My organization really cares about my wellbeing.",[2] Disagree,14,NA,NA
+jobagree_2,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: My organization really cares about my wellbeing.",[3] Neither agree nor disagree,33,NA,NA
+jobagree_2,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: My organization really cares about my wellbeing.",[4] Agree,83,NA,NA
+jobagree_2,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: My organization really cares about my wellbeing.",[5] Strongly agree,88,NA,NA
+jobagree_3,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I feel like 'part of the family' at this organization.","[-99, NA] Missing",363,NA,NA
+jobagree_3,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I feel like 'part of the family' at this organization.",[1] Strongly disagree,1,NA,NA
+jobagree_3,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I feel like 'part of the family' at this organization.",[2] Disagree,12,NA,NA
+jobagree_3,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I feel like 'part of the family' at this organization.",[3] Neither agree nor disagree,39,NA,NA
+jobagree_3,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I feel like 'part of the family' at this organization.",[4] Agree,79,NA,NA
+jobagree_3,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I feel like 'part of the family' at this organization.",[5] Strongly agree,88,NA,NA
+jobagree_4,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: Help is available from my organization when I have a problem.","[-99, NA] Missing",362,NA,NA
+jobagree_4,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: Help is available from my organization when I have a problem.",[1] Strongly disagree,1,NA,NA
+jobagree_4,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: Help is available from my organization when I have a problem.",[2] Disagree,10,NA,NA
+jobagree_4,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: Help is available from my organization when I have a problem.",[3] Neither agree nor disagree,24,NA,NA
+jobagree_4,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: Help is available from my organization when I have a problem.",[4] Agree,95,NA,NA
+jobagree_4,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: Help is available from my organization when I have a problem.",[5] Strongly agree,90,NA,NA
+jobagree_5,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: My job at this organization is secure.","[-99, NA] Missing",363,NA,NA
+jobagree_5,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: My job at this organization is secure.",[1] Strongly disagree,2,NA,NA
+jobagree_5,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: My job at this organization is secure.",[2] Disagree,12,NA,NA
+jobagree_5,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: My job at this organization is secure.",[3] Neither agree nor disagree,38,NA,NA
+jobagree_5,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: My job at this organization is secure.",[4] Agree,97,NA,NA
+jobagree_5,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: My job at this organization is secure.",[5] Strongly agree,70,NA,NA
+jobagree_6,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I feel 'emotionally attached' to this organization.","[-99, NA] Missing",363,NA,NA
+jobagree_6,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I feel 'emotionally attached' to this organization.",[1] Strongly disagree,0,NA,NA
+jobagree_6,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I feel 'emotionally attached' to this organization.",[2] Disagree,13,NA,NA
+jobagree_6,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I feel 'emotionally attached' to this organization.",[3] Neither agree nor disagree,28,NA,NA
+jobagree_6,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I feel 'emotionally attached' to this organization.",[4] Agree,93,NA,NA
+jobagree_6,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I feel 'emotionally attached' to this organization.",[5] Strongly agree,85,NA,NA
+jobagree_7,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I would feel guilty if I left this organization right now.","[-99, NA] Missing",362,NA,NA
+jobagree_7,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I would feel guilty if I left this organization right now.",[1] Strongly disagree,1,NA,NA
+jobagree_7,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I would feel guilty if I left this organization right now.",[2] Disagree,15,NA,NA
+jobagree_7,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I would feel guilty if I left this organization right now.",[3] Neither agree nor disagree,28,NA,NA
+jobagree_7,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I would feel guilty if I left this organization right now.",[4] Agree,84,NA,NA
+jobagree_7,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I would feel guilty if I left this organization right now.",[5] Strongly agree,92,NA,NA
+jobagree_8,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: My organization strongly considers my goals and values.","[-99, NA] Missing",362,NA,NA
+jobagree_8,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: My organization strongly considers my goals and values.",[1] Strongly disagree,3,NA,NA
+jobagree_8,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: My organization strongly considers my goals and values.",[2] Disagree,16,NA,NA
+jobagree_8,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: My organization strongly considers my goals and values.",[3] Neither agree nor disagree,50,NA,NA
+jobagree_8,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: My organization strongly considers my goals and values.",[4] Agree,83,NA,NA
+jobagree_8,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: My organization strongly considers my goals and values.",[5] Strongly agree,68,NA,NA
+jobagree_9,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I owe a great deal to this organization.","[-99, NA] Missing",362,NA,NA
+jobagree_9,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I owe a great deal to this organization.",[1] Strongly disagree,4,NA,NA
+jobagree_9,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I owe a great deal to this organization.",[2] Disagree,20,NA,NA
+jobagree_9,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I owe a great deal to this organization.",[3] Neither agree nor disagree,65,NA,NA
+jobagree_9,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I owe a great deal to this organization.",[4] Agree,80,NA,NA
+jobagree_9,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I owe a great deal to this organization.",[5] Strongly agree,51,NA,NA
+jobagree_10,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I am confident that I will be able to work for this organization as long as I wish.","[-99, NA] Missing",362,NA,NA
+jobagree_10,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I am confident that I will be able to work for this organization as long as I wish.",[1] Strongly disagree,2,NA,NA
+jobagree_10,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I am confident that I will be able to work for this organization as long as I wish.",[2] Disagree,15,NA,NA
+jobagree_10,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I am confident that I will be able to work for this organization as long as I wish.",[3] Neither agree nor disagree,29,NA,NA
+jobagree_10,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I am confident that I will be able to work for this organization as long as I wish.",[4] Agree,106,NA,NA
+jobagree_10,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I am confident that I will be able to work for this organization as long as I wish.",[5] Strongly agree,68,NA,NA
+jobagree_11,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I frequently think of quitting my current job.","[-99, NA] Missing",362,NA,NA
+jobagree_11,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I frequently think of quitting my current job.",[1] Strongly disagree,52,NA,NA
+jobagree_11,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I frequently think of quitting my current job.",[2] Disagree,75,NA,NA
+jobagree_11,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I frequently think of quitting my current job.",[3] Neither agree nor disagree,55,NA,NA
+jobagree_11,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I frequently think of quitting my current job.",[4] Agree,29,NA,NA
+jobagree_11,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I frequently think of quitting my current job.",[5] Strongly agree,9,NA,NA
+jobagree_12,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: It would be very hard for me to leave my job right now even if I wanted to.","[-99, NA] Missing",362,NA,NA
+jobagree_12,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: It would be very hard for me to leave my job right now even if I wanted to.",[1] Strongly disagree,9,NA,NA
+jobagree_12,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: It would be very hard for me to leave my job right now even if I wanted to.",[2] Disagree,14,NA,NA
+jobagree_12,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: It would be very hard for me to leave my job right now even if I wanted to.",[3] Neither agree nor disagree,52,NA,NA
+jobagree_12,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: It would be very hard for me to leave my job right now even if I wanted to.",[4] Agree,92,NA,NA
+jobagree_12,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: It would be very hard for me to leave my job right now even if I wanted to.",[5] Strongly agree,53,NA,NA
+jobagree_13,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: Right now, staying with my job at this organization is a matter of necessity as much as desire.","[-99, NA] Missing",362,NA,NA
+jobagree_13,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: Right now, staying with my job at this organization is a matter of necessity as much as desire.",[1] Strongly disagree,20,NA,NA
+jobagree_13,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: Right now, staying with my job at this organization is a matter of necessity as much as desire.",[2] Disagree,39,NA,NA
+jobagree_13,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: Right now, staying with my job at this organization is a matter of necessity as much as desire.",[3] Neither agree nor disagree,55,NA,NA
+jobagree_13,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: Right now, staying with my job at this organization is a matter of necessity as much as desire.",[4] Agree,82,NA,NA
+jobagree_13,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: Right now, staying with my job at this organization is a matter of necessity as much as desire.",[5] Strongly agree,24,NA,NA
+jobagree_14,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I will probably look for another job in the next year.","[-99, NA] Missing",362,NA,NA
+jobagree_14,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I will probably look for another job in the next year.",[1] Strongly disagree,75,NA,NA
+jobagree_14,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I will probably look for another job in the next year.",[2] Disagree,59,NA,NA
+jobagree_14,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I will probably look for another job in the next year.",[3] Neither agree nor disagree,43,NA,NA
+jobagree_14,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I will probably look for another job in the next year.",[4] Agree,31,NA,NA
+jobagree_14,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I will probably look for another job in the next year.",[5] Strongly agree,12,NA,NA
+jobagree_15,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: There is a good chance that I will leave this job in the next year or so.","[-99, NA] Missing",362,NA,NA
+jobagree_15,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: There is a good chance that I will leave this job in the next year or so.",[1] Strongly disagree,78,NA,NA
+jobagree_15,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: There is a good chance that I will leave this job in the next year or so.",[2] Disagree,52,NA,NA
+jobagree_15,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: There is a good chance that I will leave this job in the next year or so.",[3] Neither agree nor disagree,43,NA,NA
+jobagree_15,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: There is a good chance that I will leave this job in the next year or so.",[4] Agree,32,NA,NA
+jobagree_15,"Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: There is a good chance that I will leave this job in the next year or so.",[5] Strongly agree,15,NA,NA
+jobtrain_1,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Work-life balance,"[-99, NA] Missing",0,NA,NA
+jobtrain_1,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Work-life balance,[0] Unchecked,525,NA,NA
+jobtrain_1,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Work-life balance,[1] Checked,57,NA,NA
+jobtrain_2,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Conducting effective meetings,"[-99, NA] Missing",0,NA,NA
+jobtrain_2,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Conducting effective meetings,[0] Unchecked,544,NA,NA
+jobtrain_2,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Conducting effective meetings,[1] Checked,38,NA,NA
+jobtrain_3,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Being an effective leader,"[-99, NA] Missing",0,NA,NA
+jobtrain_3,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Being an effective leader,[0] Unchecked,528,NA,NA
+jobtrain_3,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Being an effective leader,[1] Checked,54,NA,NA
+jobtrain_4,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Leading the change process,"[-99, NA] Missing",0,NA,NA
+jobtrain_4,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Leading the change process,[0] Unchecked,544,NA,NA
+jobtrain_4,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Leading the change process,[1] Checked,38,NA,NA
+jobtrain_5,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Analyzing and interpreting data,"[-99, NA] Missing",0,NA,NA
+jobtrain_5,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Analyzing and interpreting data,[0] Unchecked,558,NA,NA
+jobtrain_5,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Analyzing and interpreting data,[1] Checked,24,NA,NA
+jobtrain_6,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Informed decision making,"[-99, NA] Missing",0,NA,NA
+jobtrain_6,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Informed decision making,[0] Unchecked,558,NA,NA
+jobtrain_6,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Informed decision making,[1] Checked,24,NA,NA
+jobtrain_7,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Creating and communicating a vision,"[-99, NA] Missing",0,NA,NA
+jobtrain_7,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Creating and communicating a vision,[0] Unchecked,551,NA,NA
+jobtrain_7,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Creating and communicating a vision,[1] Checked,31,NA,NA
+jobtrain_8,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Developing and implementing a strategic plan,"[-99, NA] Missing",0,NA,NA
+jobtrain_8,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Developing and implementing a strategic plan,[0] Unchecked,549,NA,NA
+jobtrain_8,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Developing and implementing a strategic plan,[1] Checked,33,NA,NA
+jobtrain_9,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Delegating tasks to others,"[-99, NA] Missing",0,NA,NA
+jobtrain_9,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Delegating tasks to others,[0] Unchecked,546,NA,NA
+jobtrain_9,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Delegating tasks to others,[1] Checked,36,NA,NA
+jobtrain_10,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Inspiring and motivating staff,"[-99, NA] Missing",0,NA,NA
+jobtrain_10,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Inspiring and motivating staff,[0] Unchecked,525,NA,NA
+jobtrain_10,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Inspiring and motivating staff,[1] Checked,57,NA,NA
+jobtrain_11,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Prioritizing,"[-99, NA] Missing",0,NA,NA
+jobtrain_11,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Prioritizing,[0] Unchecked,562,NA,NA
+jobtrain_11,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Prioritizing,[1] Checked,20,NA,NA
+jobtrain_12,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Problem solving,"[-99, NA] Missing",0,NA,NA
+jobtrain_12,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Problem solving,[0] Unchecked,561,NA,NA
+jobtrain_12,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Problem solving,[1] Checked,21,NA,NA
+jobtrain_13,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Time management,"[-99, NA] Missing",0,NA,NA
+jobtrain_13,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Time management,[0] Unchecked,554,NA,NA
+jobtrain_13,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Time management,[1] Checked,28,NA,NA
+jobtrain_14,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Conflict resolution and mediation,"[-99, NA] Missing",0,NA,NA
+jobtrain_14,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Conflict resolution and mediation,[0] Unchecked,528,NA,NA
+jobtrain_14,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Conflict resolution and mediation,[1] Checked,54,NA,NA
+jobtrain_15,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Oral and written communications,"[-99, NA] Missing",0,NA,NA
+jobtrain_15,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Oral and written communications,[0] Unchecked,569,NA,NA
+jobtrain_15,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Oral and written communications,[1] Checked,13,NA,NA
+jobtrain_16,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Cultivating effective relationships,"[-99, NA] Missing",0,NA,NA
+jobtrain_16,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Cultivating effective relationships,[0] Unchecked,555,NA,NA
+jobtrain_16,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Cultivating effective relationships,[1] Checked,27,NA,NA
+jobtrain_17,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Person-centered care / culture change,"[-99, NA] Missing",0,NA,NA
+jobtrain_17,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Person-centered care / culture change,[0] Unchecked,553,NA,NA
+jobtrain_17,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Person-centered care / culture change,[1] Checked,29,NA,NA
+jobtrain_18,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Team building,"[-99, NA] Missing",0,NA,NA
+jobtrain_18,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Team building,[0] Unchecked,536,NA,NA
+jobtrain_18,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Team building,[1] Checked,46,NA,NA
+jobtrain_19,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Managing teams,"[-99, NA] Missing",0,NA,NA
+jobtrain_19,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Managing teams,[0] Unchecked,543,NA,NA
+jobtrain_19,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Managing teams,[1] Checked,39,NA,NA
+jobtrain_20,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Consensus building,"[-99, NA] Missing",0,NA,NA
+jobtrain_20,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Consensus building,[0] Unchecked,559,NA,NA
+jobtrain_20,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Consensus building,[1] Checked,23,NA,NA
+jobtrain_21,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Active listening,"[-99, NA] Missing",0,NA,NA
+jobtrain_21,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Active listening,[0] Unchecked,565,NA,NA
+jobtrain_21,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Active listening,[1] Checked,17,NA,NA
+jobtrain_22,"Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Coaching, teaching, and mentoring","[-99, NA] Missing",0,NA,NA
+jobtrain_22,"Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Coaching, teaching, and mentoring",[0] Unchecked,533,NA,NA
+jobtrain_22,"Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Coaching, teaching, and mentoring",[1] Checked,49,NA,NA
+jobtrain_23,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Other,"[-99, NA] Missing",0,NA,NA
+jobtrain_23,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Other,[0] Unchecked,575,NA,NA
+jobtrain_23,Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Other,[1] Checked,7,NA,NA
+genhealth,"Q23. Would you say your health in general is excellent, very good, good, fair, or poor?","[-99, NA] Missing",362,NA,NA
+genhealth,"Q23. Would you say your health in general is excellent, very good, good, fair, or poor?",[1] Poor,5,NA,NA
+genhealth,"Q23. Would you say your health in general is excellent, very good, good, fair, or poor?",[2] Fair,24,NA,NA
+genhealth,"Q23. Would you say your health in general is excellent, very good, good, fair, or poor?",[3] Good,92,NA,NA
+genhealth,"Q23. Would you say your health in general is excellent, very good, good, fair, or poor?",[4] Very good,65,NA,NA
+genhealth,"Q23. Would you say your health in general is excellent, very good, good, fair, or poor?",[5] Excellent,34,NA,NA
+feelworry,"Q24. How often do you feel worried, nervous, or anxious?","[-99, NA] Missing",362,NA,NA
+feelworry,"Q24. How often do you feel worried, nervous, or anxious?",[1] Never,5,NA,NA
+feelworry,"Q24. How often do you feel worried, nervous, or anxious?",[2] A few times a year,26,NA,NA
+feelworry,"Q24. How often do you feel worried, nervous, or anxious?",[3] Monthly,27,NA,NA
+feelworry,"Q24. How often do you feel worried, nervous, or anxious?",[4] Weekly,66,NA,NA
+feelworry,"Q24. How often do you feel worried, nervous, or anxious?",[5] Daily,96,NA,NA
+feeldepressed,Q25. How often do you feel depressed?,"[-99, NA] Missing",362,NA,NA
+feeldepressed,Q25. How often do you feel depressed?,[1] Never,38,NA,NA
+feeldepressed,Q25. How often do you feel depressed?,[2] A few times a year,96,NA,NA
+feeldepressed,Q25. How often do you feel depressed?,[3] Monthly,25,NA,NA
+feeldepressed,Q25. How often do you feel depressed?,[4] Weekly,39,NA,NA
+feeldepressed,Q25. How often do you feel depressed?,[5] Daily,22,NA,NA
+jobbarr_1,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: Working here makes it hard to spend enough time with my family.,"[-99, NA] Missing",362,NA,NA
+jobbarr_1,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: Working here makes it hard to spend enough time with my family.,[1] Strongly disagree,11,NA,NA
+jobbarr_1,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: Working here makes it hard to spend enough time with my family.,[2] Disagree,47,NA,NA
+jobbarr_1,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: Working here makes it hard to spend enough time with my family.,[3] Neither agree nor disagree,61,NA,NA
+jobbarr_1,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: Working here makes it hard to spend enough time with my family.,[4] Agree,69,NA,NA
+jobbarr_1,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: Working here makes it hard to spend enough time with my family.,[5] Strongly agree,32,NA,NA
+jobbarr_2,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: Working here leaves little time for other activities.,"[-99, NA] Missing",363,NA,NA
+jobbarr_2,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: Working here leaves little time for other activities.,[1] Strongly disagree,10,NA,NA
+jobbarr_2,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: Working here leaves little time for other activities.,[2] Disagree,41,NA,NA
+jobbarr_2,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: Working here leaves little time for other activities.,[3] Neither agree nor disagree,44,NA,NA
+jobbarr_2,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: Working here leaves little time for other activities.,[4] Agree,90,NA,NA
+jobbarr_2,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: Working here leaves little time for other activities.,[5] Strongly agree,34,NA,NA
+jobbarr_3,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I have too much work and too little time to do it in.,"[-99, NA] Missing",362,NA,NA
+jobbarr_3,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I have too much work and too little time to do it in.,[1] Strongly disagree,7,NA,NA
+jobbarr_3,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I have too much work and too little time to do it in.,[2] Disagree,42,NA,NA
+jobbarr_3,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I have too much work and too little time to do it in.,[3] Neither agree nor disagree,64,NA,NA
+jobbarr_3,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I have too much work and too little time to do it in.,[4] Agree,68,NA,NA
+jobbarr_3,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I have too much work and too little time to do it in.,[5] Strongly agree,39,NA,NA
+jobbarr_4,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I sometimes dread the telephone ringing at home because the call might be job-related.,"[-99, NA] Missing",362,NA,NA
+jobbarr_4,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I sometimes dread the telephone ringing at home because the call might be job-related.,[1] Strongly disagree,7,NA,NA
+jobbarr_4,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I sometimes dread the telephone ringing at home because the call might be job-related.,[2] Disagree,33,NA,NA
+jobbarr_4,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I sometimes dread the telephone ringing at home because the call might be job-related.,[3] Neither agree nor disagree,41,NA,NA
+jobbarr_4,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I sometimes dread the telephone ringing at home because the call might be job-related.,[4] Agree,81,NA,NA
+jobbarr_4,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I sometimes dread the telephone ringing at home because the call might be job-related.,[5] Strongly agree,58,NA,NA
+jobbarr_5,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I feel like I never had a day off.,"[-99, NA] Missing",362,NA,NA
+jobbarr_5,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I feel like I never had a day off.,[1] Strongly disagree,16,NA,NA
+jobbarr_5,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I feel like I never had a day off.,[2] Disagree,51,NA,NA
+jobbarr_5,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I feel like I never had a day off.,[3] Neither agree nor disagree,52,NA,NA
+jobbarr_5,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I feel like I never had a day off.,[4] Agree,53,NA,NA
+jobbarr_5,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I feel like I never had a day off.,[5] Strongly agree,48,NA,NA
+jobbarr_6,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: There are lots of times when my job drives me right up the wall.,"[-99, NA] Missing",363,NA,NA
+jobbarr_6,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: There are lots of times when my job drives me right up the wall.,[1] Strongly disagree,12,NA,NA
+jobbarr_6,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: There are lots of times when my job drives me right up the wall.,[2] Disagree,49,NA,NA
+jobbarr_6,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: There are lots of times when my job drives me right up the wall.,[3] Neither agree nor disagree,56,NA,NA
+jobbarr_6,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: There are lots of times when my job drives me right up the wall.,[4] Agree,75,NA,NA
+jobbarr_6,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: There are lots of times when my job drives me right up the wall.,[5] Strongly agree,27,NA,NA
+jobbarr_7,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: Sometimes when I think about my job I get a tight feeling in my chest.,"[-99, NA] Missing",362,NA,NA
+jobbarr_7,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: Sometimes when I think about my job I get a tight feeling in my chest.,[1] Strongly disagree,27,NA,NA
+jobbarr_7,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: Sometimes when I think about my job I get a tight feeling in my chest.,[2] Disagree,64,NA,NA
+jobbarr_7,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: Sometimes when I think about my job I get a tight feeling in my chest.,[3] Neither agree nor disagree,54,NA,NA
+jobbarr_7,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: Sometimes when I think about my job I get a tight feeling in my chest.,[4] Agree,55,NA,NA
+jobbarr_7,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: Sometimes when I think about my job I get a tight feeling in my chest.,[5] Strongly agree,20,NA,NA
+jobbarr_8,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I feel guilty when I take time off from my job.,"[-99, NA] Missing",362,NA,NA
+jobbarr_8,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I feel guilty when I take time off from my job.,[1] Strongly disagree,7,NA,NA
+jobbarr_8,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I feel guilty when I take time off from my job.,[2] Disagree,33,NA,NA
+jobbarr_8,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I feel guilty when I take time off from my job.,[3] Neither agree nor disagree,40,NA,NA
+jobbarr_8,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I feel guilty when I take time off from my job.,[4] Agree,87,NA,NA
+jobbarr_8,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I feel guilty when I take time off from my job.,[5] Strongly agree,53,NA,NA
+jobbarr_9,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: My job gets to me more than it should.,"[-99, NA] Missing",363,NA,NA
+jobbarr_9,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: My job gets to me more than it should.,[1] Strongly disagree,12,NA,NA
+jobbarr_9,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: My job gets to me more than it should.,[2] Disagree,58,NA,NA
+jobbarr_9,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: My job gets to me more than it should.,[3] Neither agree nor disagree,63,NA,NA
+jobbarr_9,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: My job gets to me more than it should.,[4] Agree,62,NA,NA
+jobbarr_9,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: My job gets to me more than it should.,[5] Strongly agree,24,NA,NA
+jobbarr_10,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I have felt fidgety or nervous as a result of my job.,"[-99, NA] Missing",363,NA,NA
+jobbarr_10,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I have felt fidgety or nervous as a result of my job.,[1] Strongly disagree,22,NA,NA
+jobbarr_10,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I have felt fidgety or nervous as a result of my job.,[2] Disagree,58,NA,NA
+jobbarr_10,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I have felt fidgety or nervous as a result of my job.,[3] Neither agree nor disagree,58,NA,NA
+jobbarr_10,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I have felt fidgety or nervous as a result of my job.,[4] Agree,54,NA,NA
+jobbarr_10,Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I have felt fidgety or nervous as a result of my job.,[5] Strongly agree,27,NA,NA

@@ -1,0 +1,55 @@
+-----------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/nate/My Drive (nparsons@pdx.edu)/projects/IoA/IOA_AdminTurnover_local/log/adTurn_
+> log.log
+  log type:  text
+ opened on:  10 Sep 2022, 18:35:45
+
+. 
+end of do-file
+
+. do "/var/folders/9v/cn68hf2j4y15rpncc9nlld7w0000gn/T//SD48312.000000"
+
+. clear all
+
+. 
+end of do-file
+
+. do "/var/folders/9v/cn68hf2j4y15rpncc9nlld7w0000gn/T//SD48312.000000"
+
+. set linesize 80 
+
+. 
+end of do-file
+
+. do "/var/folders/9v/cn68hf2j4y15rpncc9nlld7w0000gn/T//SD48312.000000"
+
+. set more off
+
+. 
+end of do-file
+
+. do "/var/folders/9v/cn68hf2j4y15rpncc9nlld7w0000gn/T//SD48312.000000"
+
+. use "data/adTurn_clean.dta"
+
+. 
+end of do-file
+
+. do "/var/folders/9v/cn68hf2j4y15rpncc9nlld7w0000gn/T//SD48312.000000"
+
+. drop if (response==0)
+(322 observations deleted)
+
+. 
+end of do-file
+
+. do "/var/folders/9v/cn68hf2j4y15rpncc9nlld7w0000gn/T//SD48312.000000"
+
+. drop if (exclude==1)
+(15 observations deleted)
+
+. 
+end of do-file
+
+. table ( sex age race education experience tenure_sr salary ) ( quit ) ()

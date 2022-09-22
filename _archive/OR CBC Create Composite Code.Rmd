@@ -1,0 +1,48 @@
+
+## Split training and testing data
+
+```{r}
+tidymodels_prefer()
+
+set.seed(13)
+
+dat_split <- initial_split(data, prop = 0.80, strata = quit)
+dat_train <- training(dat_split)
+dat_test <- testing(dat_split)
+```
+
+
+## Create composites from subscales
+
+```{r}
+dat_train_comp <- dat_train |> 
+  composite(variables = c("q19_1", "q19_2", "q19_3", "q19_4", "q19_5", "q19_6", 
+                          "q19_7", "q19_8", "q19_9", "q19_10", "q19_11", 
+                          "q19_12", "q19_13", "q19_14"), 
+            name = "q19", 
+            type = "mean", 
+            standardize = TRUE, 
+            missing.allowed = 1) |> 
+  select(-starts_with("q19_")) |> 
+  composite(variables = c("q20_1", "q20_2", "q20_3", "q20_4", "q20_5", "q20_6", 
+                          "q20_7", "q20_8", "q20_9", "q20_10", "q20_11", 
+                          "q20_12", "q20_13", "q20_14", "q20_15"), 
+            name = "q20", 
+            type = "mean", 
+            standardize = TRUE, 
+            missing.allowed = 1) |> 
+  select(-c("q20_1", "q20_2", "q20_3", "q20_4", "q20_5", "q20_6", 
+                          "q20_7", "q20_8", "q20_9", "q20_10", "q20_11", 
+                          "q20_12", "q20_13", "q20_14", "q20_15")) |> 
+  composite(variables = c("q26_1", "q26_2", "q26_3", "q26_4", "q26_5", "q26_6", 
+                          "q26_7", "q26_8", "q26_9", "q26_10"), 
+            name = "q26", 
+            type = "mean", 
+            standardize = TRUE, 
+            missing.allowed = 1) |> 
+  select(-c("q26_1", "q26_2", "q26_3", "q26_4", "q26_5", "q26_6", 
+                          "q26_7", "q26_8", "q26_9", "q26_10"))
+```
+
+
+

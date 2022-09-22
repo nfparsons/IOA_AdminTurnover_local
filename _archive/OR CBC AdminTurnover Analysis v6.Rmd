@@ -1,0 +1,1354 @@
+---
+title: "Oregon Community-Based Care Administrative Turnover Study"
+subtitle: "v5"
+author: "N.F. Parsons"
+date: "`r Sys.Date()`"
+output: 
+  bookdown::html_document2: 
+    toc: true
+    toc_float:
+      collapsed: false
+    toc_depth: 1
+    code_folding: hide
+    code_download: true
+  bookdown::word_document2: default
+  bookdown::pdf_document2: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      error = FALSE, 
+                      message = FALSE, 
+                      warning = FALSE)
+
+if (!require("pacman")) 
+  install.packages("pacman", repos = "https://cran.rstudio.org")
+
+## base packages
+p_load(
+  here, 
+  conflicted, 
+  scales, 
+  skimr, 
+  labelled
+)
+
+## interface packages
+p_load(
+  haven, 
+  readxl, 
+  RStata
+)
+
+## data manipulation
+p_load(
+  tidyverse, 
+  janitor, 
+  lubridate, 
+  janitor,
+  broom, 
+  sjmisc
+)
+
+p_load_gh(
+  "dr-JT/datawrangling", 
+  "dr-JT/semoutput"
+)
+
+## modeling 
+p_load(
+  psych, 
+  doParallel, 
+  doRNG,
+  mice, 
+  lavaan, 
+  semTools, 
+  leaps, 
+  car
+)
+
+## tables
+p_load(
+  officer, 
+  officedown,
+  flextable, 
+  mschart, 
+  rvg, 
+  gtsummary
+)
+
+## data viz
+p_load(
+  ggthemes,
+  ggsci, 
+  patchwork, 
+  semPlot, 
+  sjPlot, 
+  corrplot
+)
+
+here::i_am("_archive/here_anchor.R")
+setwd(here())
+
+conflict_prefer_all("dplyr", quiet = TRUE)
+
+options(scipen = 9999)
+options("RStata.StataPath" = "/Applications/Stata/StataSE.app/Contents/MacOS/stata-se")
+options("RStata.StataVersion" = 17)
+set.seed(13)
+
+rm(list = ls())
+```
+
+
+```{r}
+#| label: clean, assemble, and prep data
+#| include: false
+#| eval: false
+
+## load survey data
+### first read_dta loads and transforms completed surveys
+
+dat.org <-
+  read_dta("data/AdminTurnover_Survey_Data_012721_020221_USE_THIS.dta") |>
+  select(-ends_with("_TEXT")) |>
+  clean_names() |>
+  rename_all(tolower) |>
+  mutate(across(everything(), ~ str_trim(.)),
+         across(everything(), ~ tolower(.))) |>
+  na_if(-99) |>
+  
+  ## join turnover data
+  left_join(
+    read_excel(here("data", "AdTurn List 021622.xlsx")) |>
+      ## clean up variable names
+      clean_names() |>
+      rename_all(tolower) |>
+      mutate(
+        across(everything(), ~ str_trim(.)),
+        across(everything(), ~ tolower(.))
+      ) |>
+      select(
+        ccmu1,
+        firstname,
+        lastname,
+        check1,
+        started,
+        ended_100121,
+        no_admin_record
+      ),
+    by = c(
+      "ccmu" = "ccmu1",
+      "firstname" = "firstname",
+      "lastname" = "lastname"
+    )
+  ) |> 
+  mutate(experience = str_replace(q16, "^$", NA_character_)) |> 
+  mutate(experience = str_replace(q16, ".", NA_character_)) |>
+  mutate(experience = str_replace(q16, "n/a", NA_character_)) |> 
+  mutate(experience = str_replace(q16, "years all with mosaic", "")) |> 
+  mutate(experience = str_replace(q16, "years", "")) |> 
+  mutate(experience = str_replace(q16, "year", "")) |> 
+  mutate(experience = str_replace(q16, "yrs", "")) |> 
+  mutate(experience = str_replace(q16, "2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020", "20")) |> 
+  mutate(experience = str_trim(experience)) |> 
+  mutate(across(-c(id, started, ended_100121, no_admin_record), ~as.numeric(.))) |> 
+  mutate(across(c(started, ended_100121), ~ymd(.))) |> 
+  select(-check1.x, -check1.y)
+  
+wgt1 <- glm(resp ~ anymc + medi + catcap + rural + nonpro, 
+            family = "binomial", 
+            data = dat.org)
+
+dat.org <- dat.org |> 
+  mutate(pred = predict(wgt1, dat.org, type = "response")) |> 
+  mutate(svy_weight = 1/pred)
+
+write_rds(
+  dat.org, 
+  here("data", "AdTurn_original.rds")
+)
+
+write_dta(
+  dat.org , 
+  here("data", "AdTurn_original.dta")
+)
+
+rm(wgt1)
+```
+
+- Original sample of `r nrow(dat.org)` administrators
+
+```{r}
+dat.resp <- dat.org |> 
+  filter(resp == 1)
+
+dat <- dat.resp |> 
+  filter(is.na(no_admin_record)) |> 
+  transmute(
+    id = as.character(order012621), 
+    quit = case_when(is.na(ended_100121) ~ 0, 
+                     !is.na(ended_100121) ~ 1, 
+                     TRUE ~ NA_real_), 
+    
+    ## demographics
+    gender = case_when(q1 == 1 ~ 1, # Male
+                   q1 == 2 ~ 2, # Female
+                   q1 == 3 ~ NA_real_, # Prefer to self-describe
+                   q1 == 4 ~ NA_real_, # Prefer not to answer
+                   TRUE ~ NA_real_),
+    age = case_when(
+      q2 < 20 ~ 1,
+      q2 >= 20 & q2 < 30 ~ 2,
+      q2 >= 30 & q2 < 40 ~ 3,
+      q2 >= 40 & q2 < 50 ~ 4,
+      q2 >= 50 & q2 < 60 ~ 5,
+      q2 >= 60 & q2 < 70 ~ 6,
+      q2 >= 70 ~ 7,
+      TRUE ~ NA_real_),
+    race = case_when(q3_6 == 1 & is.na(q3_4) ~ 0, 
+                     TRUE ~ 1), 
+    education = q4,
+    experience = case_when(experience < 10 ~ 1,
+                           experience >= 10 & experience < 16 ~ 2, 
+                           experience >= 16 & experience < 22 ~ 3, 
+                           experience >= 22 ~ 4, 
+                           TRUE ~ NA_real_), 
+    tenure = as.numeric(ended_100121 - started), 
+    salary = q17,
+    
+    ## facility characteristics
+    anymc = anymc,
+    catcap = case_when(
+      catcap == 0 ~ 1,
+      catcap == 1 ~ 2,
+      catcap == 2 ~ 3,
+      catcap == 3 ~ 4,
+      TRUE ~ NA_real_
+    ),
+    medi = medi,
+    rural = case_when(rural == 0 ~ 1,
+                      rural == 1 ~ 2,
+                      rural == 2 ~ 3,
+                      TRUE ~ NA_real_),
+    nonpro = nonpro,
+    
+    ## training, certs, licenses
+    curri_aging = case_when(is.na(q5_1) ~ 0,
+                            q5_1 == 1 ~ 1, 
+                            q5_1 == 2 ~ 0, 
+                            TRUE ~ 0),
+    curri_disabilities = case_when(is.na(q5_2) ~ 0,
+                            q5_2 == 1 ~ 1, 
+                            q5_2 == 2 ~ 0, 
+                            TRUE ~ 0),
+    curri_bhi = case_when(is.na(q5_3) ~ 0,
+                            q5_3 == 1 ~ 1, 
+                            q5_3 == 2 ~ 0, 
+                            TRUE ~ 0),
+    curri_lts = case_when(is.na(q5_4) ~ 0,
+                            q5_4 == 1 ~ 1, 
+                            q5_4 == 2 ~ 0, 
+                            TRUE ~ 0),
+    curri_admin = case_when(is.na(q5_5) ~ 0,
+                            q5_5 == 1 ~ 1, 
+                            q5_5 == 2 ~ 0, 
+                            TRUE ~ 0),
+    
+    cert_nha = case_when(is.na(q6_1) ~ 0, 
+                         q6_1 == 1 ~ 0, 
+                         q6_1 == 2 ~ 1, 
+                         q6_1 == 3 ~ 2, 
+                         TRUE ~ 0), 
+    cert_rn = case_when(is.na(q6_2) ~ 0, 
+                         q6_2 == 1 ~ 0, 
+                         q6_2 == 2 ~ 1, 
+                         q6_2 == 3 ~ 2, 
+                         TRUE ~ 0), 
+    cert_lpn = case_when(is.na(q6_3) ~ 0, 
+                         q6_3 == 1 ~ 0, 
+                         q6_3 == 2 ~ 1, 
+                         q6_3 == 3 ~ 2, 
+                         TRUE ~ 0), 
+    cert_cna = case_when(is.na(q6_4) ~ 0, 
+                         q6_4 == 1 ~ 0, 
+                         q6_4 == 2 ~ 1, 
+                         q6_4 == 3 ~ 2, 
+                         TRUE ~ 0), 
+    cert_cma = case_when(is.na(q6_5) ~ 0, 
+                         q6_5 == 1 ~ 0, 
+                         q6_5 == 2 ~ 1, 
+                         q6_5 == 3 ~ 2, 
+                         TRUE ~ 0), 
+    cert_other = case_when(is.na(q6_6) ~ 0, 
+                         q6_6 == 1 ~ 0, 
+                         q6_6 == 2 ~ 1, 
+                         q6_6 == 3 ~ 2, 
+                         TRUE ~ 0), 
+    
+    ## current job
+    ownership = case_when(is.na(q10a) ~ 0, 
+                          q10a == 1 ~ 1, 
+                          q10a == 2 ~ 0, 
+                          TRUE ~ 0), 
+    prev_position = case_when(is.na(q12) ~ 0, 
+                              q12 == 1 ~ 1, 
+                              q12 == 2 ~ 0, 
+                              TRUE ~ 0), 
+    prev_admin_alrc = case_when(is.na(q13_1) ~ 0, 
+                           q13_1 == 1 ~ 1, 
+                           TRUE ~ 0), 
+    prev_admin_mc = case_when(is.na(q13_2) ~ 0, 
+                           q13_2 == 1 ~ 1, 
+                           TRUE ~ 0), 
+    prev_admin_first = case_when(is.na(q13_3) ~ 0, 
+                           q13_3 == 1 ~ 1, 
+                           TRUE ~ 0), 
+    prev_reas_leav = case_when(is.na(q14) ~ 0, 
+                               q14 == 1 ~ 1, 
+                               q14 == 2 ~ 2, 
+                               q14 == 3 ~ 3, 
+                               q14 == 4 ~ 4, 
+                               q14 == 5 ~ 5, 
+                               TRUE ~ 0), 
+    prev_work_afh = case_when(is.na(q15_1) ~ 0, 
+                              q15_1 == 1 ~ 1, 
+                              q15_1 == 2 ~ 0, 
+                              TRUE ~ 0), 
+    prev_work_nurshome = case_when(is.na(q15_2) ~ 0, 
+                                   q15_2 == 1 ~ 1, 
+                                   q15_2 == 2 ~ 0, 
+                                   TRUE ~ 0), 
+    prev_work_hha = case_when(is.na(q15_3) ~ 0, 
+                              q15_3 == 1 ~ 1, 
+                              q15_3 == 2 ~ 0, 
+                              TRUE ~ 0), 
+    prev_work_homecare = case_when(is.na(q15_4) ~ 0, 
+                                   q15_4 == 1 ~ 1, 
+                                   q15_4 == 2 ~ 0, 
+                                   TRUE ~ 0), 
+    prev_work_hospital = case_when(is.na(q15_5) ~ 0, 
+                                   q15_5 == 1 ~ 1, 
+                                   q15_5 == 2 ~ 0, 
+                                   TRUE ~ 0), 
+    prev_work_adc = case_when(is.na(q15_6) ~ 0, 
+                              q15_6 == 1 ~ 1, 
+                              q15_6 == 2 ~ 0, 
+                              TRUE ~ 0), 
+    
+    benefits_persins = case_when(is.na(q18_1) ~ 0, 
+                                 q18_1 == 1 ~ 1, 
+                                 q18_1 == 2 ~ 0, 
+                                 q18_1 == 3 ~ 0, 
+                                 TRUE ~ 0), 
+    benefits_famins = case_when(is.na(q18_2) ~ 0, 
+                                 q18_2 == 1 ~ 1, 
+                                 q18_2 == 2 ~ 0, 
+                                 q18_2 == 3 ~ 0, 
+                                 TRUE ~ 0), 
+    benefits_pto = case_when(is.na(q18_3) ~ 0, 
+                                 q18_3 == 1 ~ 1, 
+                                 q18_3 == 2 ~ 0, 
+                                 q18_3 == 3 ~ 0, 
+                                 TRUE ~ 0), 
+    benefits_sicklv = case_when(is.na(q18_4) ~ 0, 
+                                 q18_4 == 1 ~ 1, 
+                                 q18_4 == 2 ~ 0, 
+                                 q18_4 == 3 ~ 0, 
+                                 TRUE ~ 0), 
+    benefits_paidhol = case_when(is.na(q18_5) ~ 0, 
+                                 q18_5 == 1 ~ 1, 
+                                 q18_5 == 2 ~ 0, 
+                                 q18_5 == 3 ~ 0, 
+                                 TRUE ~ 0), 
+    benefits_pension = case_when(is.na(q18_6) ~ 0, 
+                                 q18_6 == 1 ~ 1, 
+                                 q18_6 == 2 ~ 0, 
+                                 q18_6 == 3 ~ 0, 
+                                 TRUE ~ 0), 
+    benefits_401k = case_when(is.na(q18_7) ~ 0, 
+                                 q18_7 == 1 ~ 1, 
+                                 q18_7 == 2 ~ 0, 
+                                 q18_7 == 3 ~ 0, 
+                                 TRUE ~ 0), 
+    benefits_lifins = case_when(is.na(q18_8) ~ 0, 
+                                 q18_8 == 1 ~ 1, 
+                                 q18_8 == 2 ~ 0, 
+                                 q18_8 == 3 ~ 0, 
+                                 TRUE ~ 0), 
+    benefits_bonus = case_when(is.na(q18_9) ~ 0, 
+                                 q18_9 == 1 ~ 1, 
+                                 q18_9 == 2 ~ 0, 
+                                 q18_9 == 3 ~ 0, 
+                                 TRUE ~ 0), 
+    
+    ## well-being
+    general_health = case_when(is.na(q23) ~ 0, 
+                               q23 == 1 ~ 5, 
+                               q23 == 2 ~ 4, 
+                               q23 == 3 ~ 3, 
+                               q23 == 4 ~ 2, 
+                               q23 == 5 ~ 1, 
+                               TRUE ~ 0), 
+    general_anxiety = case_when(is.na(q24) ~ 0, 
+                                q24 == 1 ~ 1, 
+                                q24 == 2 ~ 2, 
+                                q24 == 3 ~ 3, 
+                                q24 == 4 ~ 4, 
+                                q24 == 5 ~ 5, 
+                                TRUE ~ 0), 
+    general_depression = case_when(is.na(q25) ~ 0,
+                                   q25 == 1 ~ 1,
+                                   q25 == 2 ~ 2,
+                                   q25 == 3 ~ 3,
+                                   q25 == 4 ~ 4,
+                                   q25 == 5 ~ 5,
+                                   TRUE ~ 0),
+    
+    ## subscales
+    job_sat_security_01 = q19_1, 
+    job_sat_compensation_01 = q19_2, 
+    job_sat_growth_01 = q19_3, 
+    job_sat_social_01 = q19_4, 
+    job_sat_supervisory_01 = q19_5, 
+    job_sat_growth_02 = q19_6, 
+    job_sat_social_02 = q19_7, 
+    job_sat_supervisory_02 = q19_8, 
+    job_sat_compensation_02 = q19_9,
+    job_sat_growth_03 = q19_10, 
+    job_sat_security_02 = q19_11, 
+    job_sat_social_03 = q19_12, 
+    job_sat_growth_04 = q19_13, 
+    job_sat_supervisory_03 = q19_14, 
+    
+    org_commit_affect_01 = q20_1, 
+    org_support_01 = q20_2, 
+    org_commit_affect_02 = q20_3, 
+    org_support_02 = q20_4, 
+    org_security_01 = q20_5, 
+    org_commit_affect_03 = q20_6, 
+    org_commit_norm_01 = q20_7, 
+    org_support_03 = q20_8, 
+    org_commit_norm_02 = q20_9, 
+    org_security_02 = q20_10, 
+    org_itq_01 = q20_11, 
+    org_commit_contin_01 = q20_12, 
+    org_commit_contin_02 = q20_13, 
+    org_itq_02 = q20_14, 
+    org_itq_03 = q20_15, 
+    
+    stress_time_01 = q26_1, 
+    stress_time_02 = q26_2, 
+    stress_time_03 = q26_3, 
+    stress_time_04 = q26_4, 
+    stress_time_05 = q26_5, 
+    stress_anxiety_01 = q26_6, 
+    stress_anxiety_02 = q26_7, 
+    stress_anxiety_03 = q26_8, 
+    stress_anxiety_04 = q26_9, 
+    stress_anxiety_05 = q26_10, 
+    
+    svy_weight = svy_weight
+  )
+
+write_rds(
+  dat, 
+  here("data", "AdTurn_clean.rds")
+)
+
+write_dta(
+  dat, 
+  here("data", "AdTurn_clean.dta")
+)
+
+rm(dat.resp)
+```
+
+
+- `r nrow(dat.resp)` respondents
+- `r nrow(dat.resp) - nrow(dat)` respondents could not be connected to ODHS records
+- Final sample of `r nrow(dat)` respondents
+- Sample weights calculated via logistic regression of facility characteristics against response rate
+
+
+```{r}
+#| label: impute data
+#| include: false
+#| eval: false
+
+## Detect core count
+nCores <- min(parallel::detectCores(), 8)
+## Used by parallel::mclapply() as default
+options(mc.cores = nCores)
+## Used by doParallel as default
+options(cores = nCores)
+## Register doParallel as the parallel backend with foreach
+## http://stackoverflow.com/questions/28989855/the-difference-between-domc-and-doparallel-in-r
+doParallel::registerDoParallel(cores = nCores)
+## Report multicore use
+cat("### Using", foreach::getDoParWorkers(), "cores\n")
+cat("### Using", foreach::getDoParName(), "as backend\n")
+
+dat.mi <- mice(dat, 
+               meth = 'pmm', 
+               m = 1, 
+               maxit = 1, 
+               print = FALSE)
+
+dat.cmp <- complete(dat.mi, 1)
+
+write_rds(dat.mi, here("data", "adTurn_imputed.rds"))
+write_rds(dat.cmp, here("data", "adTurn_complete.rds"))
+```
+
+
+- Data were missing completely at random (0.295% (31)) and were imputed using predictive mean matching via multiple imputation by chained equations
+
+
+```{r}
+#| label: load data
+
+rm(list = ls())
+
+dat <- read_rds(here("data", "adTurn_complete.rds"))
+```
+
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+
+# Demographic table
+
+```{r}
+dat |> 
+  select(quit, gender, age, race, education, experience, catcap, rural, anymc, medi, nonpro) |> 
+  set_variable_labels(gender = "Gender", 
+                      age = "Age", 
+                      race = "Race", 
+                      education = "Education", 
+                      experience = "Years experience", 
+                      catcap = "Facility capacity", 
+                      rural = "Facility locale", 
+                      anymc = "Memory Care services", 
+                      medi = "Medicaid acceptance", 
+                      nonpro = "Non-profit status") |> 
+  add_value_labels(
+    quit = c("Didn't quit" = 0, "Quit" = 1), 
+    anymc = c("No memory care" = 0, "Memory care" = 1), 
+    medi = c("No Medicaid" = 0, "Medicaid" = 1), 
+    nonpro = c("For profit" = 0, "Non-profit" = 1), 
+    catcap = c("Small (6-24)" = 1, "Medium (25-49)" = 2, "Large (50-74)" = 3, "Very large (75+)" = 4), 
+    rural = c("Urban" = 1, "Rural" = 2, "Frontier" = 3), 
+    gender = c("Male" = 1, "Female" = 2), 
+    age = c("<20 years old" = 1, "20-29 years old" = 2, "30-39 years old" = 3, "40-49 years old" = 4, 
+           "50-59 years old" = 5, "60-69 years old" = 6, ">=70 years old" = 7), 
+    race = c("White, non-Hispanic" = 0, "Not White, non-Hispanic" = 1), 
+    education = c("High school diploma or equiv." = 1, "Some college credit" = 2, "Associate's degree" = 3, 
+           "Bachelor's degree" = 4, "Master's degree" = 5, "Professional degree" = 6, "Doctoral degree" = 7), 
+    experience = c("< 10 years" = 1, "10-16 years" = 2, "16-22 years" = 3, "> 22 years" = 4)
+  ) |> 
+  mutate(across(everything(), ~ labelled::to_factor(.))) |> 
+  tbl_summary(by = quit, 
+              missing_text = "(Missing)") |> 
+  add_overall() |> 
+  add_difference() |> 
+  add_p()
+```
+
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+
+# CFA {.tabset .tabset-pills}
+
+See the [lavaan Tutorial](https://lavaan.ugent.be/tutorial/index.html){target="_blank"} for model syntax
+
+
+## Job Satisfaction
+
+```{r results='asis'}
+################################################################################
+## define the model
+
+## Satisfaction with job security: q19_cfa1
+## Satisfaction with compensation: q19_cfa2
+## Growth satisfaction: q19_cfa3
+## Social satisfaction: q19_cfa4
+## Supervisory satisfaction: q19_cfa5
+
+q19.path <- '
+cfa_job_sat_security = ~ job_sat_security_01 + job_sat_security_02 
+cfa_job_sat_compensation = ~ job_sat_compensation_01 + job_sat_compensation_02 
+cfa_job_sat_growth = ~ job_sat_growth_01 + job_sat_growth_02 + job_sat_growth_03 + job_sat_growth_04
+cfa_job_sat_social = ~ job_sat_social_01 + job_sat_social_02 + job_sat_social_03
+cfa_job_sat_supervisory = ~ job_sat_supervisory_01 + job_sat_supervisory_02 + job_sat_supervisory_03
+'
+
+################################################################################
+## fit the confirmatory factor analysis
+
+q19.cfa <- cfa(model = q19.path, data = dat, 
+               mimic = "lavaan", estimator = "ML", missing = "ML", 
+               std.lv = TRUE, std.ov = FALSE, test = "standard", 
+               se = "standard", bootstrap = 1000)
+
+################################################################################
+## add CFA variables to dataset
+
+dat <- dat |> 
+  cbind(lavPredict(q19.cfa))
+
+################################################################################
+## examine CFA
+
+sem_tables(q19.cfa)
+```
+
+
+### Diagram Output
+
+```{r}
+factors <- q19.cfa@pta$vnames$lv[[1]]
+
+semPaths(q19.cfa, latents = factors, whatLabels = "std", layout = "tree2", 
+         rotation = 2, style = "lisrel", optimizeLatRes = TRUE, 
+         intercepts = FALSE, residuals = TRUE, curve = 1, curvature = 3, 
+         sizeLat = 10, nCharNodes = 8, sizeMan = 11, sizeMan2 = 4, 
+         edge.label.cex = 1.2, edge.color = "#000000")
+```
+
+
+### Residual Correlation Plot
+
+```{r}
+map(
+  dat |>
+    select(
+      gender, age, race, education, experience, salary, anymc, catcap, 
+      medi, rural, nonpro, starts_with("cfa_job_sat")
+    ),
+  cor.test,
+  y = dat$quit
+) |>
+  map_dfr(tidy, .id = "predictor") |>
+  mutate(sig = case_when(p.value <= 0.05 ~ "Significant",
+                         TRUE ~ "Not significant")) |>
+  ggplot(aes(x = fct_reorder(predictor, estimate))) +
+  geom_point(aes(y = estimate, color = sig)) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high, color = sig), width = .1) +
+  labs(title = "CFA Residual Correlation Plot: Job satisfaction & quit status",
+       x = NULL, y = NULL) +
+  scale_color_manual(name = "p Value",
+                     values = c("gray", "red")) +
+  theme(axis.text.x = element_text(
+    angle = 90,
+    vjust = 0.5,
+    hjust = 1
+  )) 
+```
+
+
+------------------------------------------------------------------------
+
+## Organization Characteristics
+
+```{r results='asis'}
+################################################################################
+## define the models
+
+## Organizational commitment: q20_cfa1
+## Perceived organizational support: q20_cfa2
+## Perceived job security: q20_cfa3
+## Intent to quit: q20_cfa4
+
+q20.path <- '
+cfa_org_commit = ~ org_commit_affect_01 + org_commit_affect_02 + org_commit_affect_03 + org_commit_norm_01 + org_commit_norm_02 + org_commit_contin_01 + org_commit_contin_02
+cfa_org_support = ~ org_support_01 + org_support_02 + org_support_03
+cfa_org_security = ~ org_security_01 + org_security_02
+cfa_org_itq = ~ org_itq_01 + org_itq_02 + org_itq_03
+'
+
+################################################################################
+## fit the confirmatory factor analyses
+
+q20.cfa <- cfa(q20.path, data = dat, 
+               mimic = "lavaan", estimator = "ML", missing = "ML", 
+               std.lv = TRUE, std.ov = FALSE, test = "standard", 
+               se = "standard", bootstrap = 1000)
+
+################################################################################
+## add CFA variables to dataset
+
+dat <- dat |> 
+  cbind(lavPredict(q20.cfa))
+
+################################################################################
+## examine CFA
+
+sem_tables(q20.cfa)
+```
+
+
+### Diagram Output
+
+```{r}
+factors <- q20.cfa@pta$vnames$lv[[1]]
+
+semPaths(q20.cfa, latents = factors, whatLabels = "std", layout = "tree2", 
+         rotation = 2, style = "lisrel", optimizeLatRes = TRUE, 
+         intercepts = FALSE, residuals = TRUE, curve = 1, curvature = 3, 
+         sizeLat = 10, nCharNodes = 8, sizeMan = 11, sizeMan2 = 4, 
+         edge.label.cex = 1.2, edge.color = "#000000")
+```
+
+
+### Residual Correlation Plot
+
+```{r}
+map(
+  dat |>
+    select(
+      gender, age, race, education, experience, salary, anymc, catcap, 
+      medi, rural, nonpro, starts_with("cfa_org_")
+    ),
+  cor.test,
+  y = dat$quit
+) |>
+  map_dfr(tidy, .id = "predictor") |>
+  mutate(sig = case_when(p.value <= 0.05 ~ "Significant",
+                         TRUE ~ "Not significant")) |>
+  ggplot(aes(x = fct_reorder(predictor, estimate))) +
+  geom_point(aes(y = estimate, color = sig)) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high, color = sig), width = .1) +
+  labs(title = "CFA Residual Correlation Plot: Organizational characteristics & quit status",
+       x = NULL, y = NULL) +
+  scale_color_manual(name = "p Value",
+                     values = c("gray", "red")) +
+  theme(axis.text.x = element_text(
+    angle = 90,
+    vjust = 0.5,
+    hjust = 1
+  )) 
+```
+
+
+------------------------------------------------------------------------
+
+## Job Stress
+
+```{r results='asis'}
+################################################################################
+## define the model
+
+## Time stress scale: q26_cfa1
+## Anxiety scale: q26_cfa2
+q26.path <- '
+cfa_stress_time =~ stress_time_01 + stress_time_02 + stress_time_03 + stress_time_04 + stress_time_05 
+cfa_stress_anxiety =~ stress_anxiety_01 + stress_anxiety_02 + stress_anxiety_03 + stress_anxiety_04 + stress_anxiety_05
+'
+
+################################################################################
+## fit the confirmatory factor analysis
+
+q26.cfa <- cfa(q26.path, data = dat, 
+               mimic = "lavaan", estimator = "ML", missing = "ML", 
+               std.lv = TRUE, std.ov = FALSE, test = "standard", 
+               se = "standard", bootstrap = 1000)
+
+################################################################################
+## add CFA variables to dataset
+
+dat <- dat |> 
+  cbind(lavPredict(q26.cfa))
+
+################################################################################
+## examine CFA
+
+sem_tables(q26.cfa)
+```
+
+
+### Diagram Output
+
+```{r}
+factors <- q26.cfa@pta$vnames$lv[[1]]
+
+semPaths(q26.cfa, latents = factors, whatLabels = "std", layout = "tree2", 
+         rotation = 2, style = "lisrel", optimizeLatRes = TRUE, 
+         intercepts = FALSE, residuals = TRUE, curve = 1, curvature = 3, 
+         sizeLat = 10, nCharNodes = 8, sizeMan = 11, sizeMan2 = 4, 
+         edge.label.cex = 1.2, edge.color = "#000000")
+```
+
+
+### Residual Correlation Plot
+
+```{r}
+map(
+  dat |>
+    select(
+      gender, age, race, education, experience, salary, anymc, catcap, 
+      medi, rural, nonpro, starts_with("cfa_stress_")
+    ),
+  cor.test,
+  y = dat$quit
+) |>
+  map_dfr(tidy, .id = "predictor") |>
+  mutate(sig = case_when(p.value <= 0.05 ~ "Significant",
+                         TRUE ~ "Not significant")) |>
+  ggplot(aes(x = fct_reorder(predictor, estimate))) +
+  geom_point(aes(y = estimate, color = sig)) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high, color = sig), width = .1) +
+  labs(title = "CFA Residual Correlation Plot: Job stress & quit status",
+       x = NULL, y = NULL) +
+  scale_color_manual(name = "p Value",
+                     values = c("gray", "red")) +
+  theme(axis.text.x = element_text(
+    angle = 90,
+    vjust = 0.5,
+    hjust = 1
+  )) 
+```
+
+
+```{r}
+################################################################################
+## clean up
+
+rm(q19.path, q20.path, q26.path, factors)
+```
+
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+
+# EFA {.tabset .tabset-pills}
+
+## Job Satisfaction
+
+```{r}
+## Determine the number of factors to extract
+VSS.scree(dat |>
+            select(starts_with("job_sat")))
+
+q19.par <- fa.parallel(dat |>
+                         select(starts_with("job_sat")),
+                       fa = "fa",
+                       plot = FALSE)
+VSS(dat |>
+      select(starts_with("job_sat")),
+    n = q19.par$nfact,
+    rotate = "varimax")
+
+## Conduct EFA analysis with nfactors determined from methods above
+q19.efa <-
+  fa(dat |>
+      select(starts_with("job_sat")),
+     fm = "pa",
+     nfactors = q19.par$nfact,
+     rotate = "varimax")
+
+## Bind factor scores to dataset
+dat <- dat |>
+  cbind(
+    factor.scores(dat |> select(starts_with("job_sat_")), q19.efa) |>
+      pluck(1) |>
+      as_tibble() |>
+      rename(
+        "efa_job_sat_factor_01" = PA1,
+        "efa_job_sat_factor_02" = PA2,
+        "efa_job_sat_factor_03" = PA3
+      )
+  )
+```
+
+### Summary Output
+
+```{r}
+tab_fa(dat |> select(starts_with("job_sat")),
+       rotation = "varimax", 
+       method = "pa", 
+       nmbr.fctr = q19.par$nfact, 
+       title = "EFA - Job Satisfaction"
+       )
+```
+
+### Diagram Output
+
+```{r}
+fa.diagram(q19.efa)
+
+## Clean up
+rm(q19.par)
+```
+
+
+### Residual Correlation Plot
+
+```{r}
+map(
+  dat |>
+    select(
+      gender, age, race, education, experience, salary, anymc, catcap, 
+      medi, rural, nonpro, starts_with("efa_job_sat_")
+    ),
+  cor.test,
+  y = dat$quit
+) |>
+  map_dfr(tidy, .id = "predictor") |>
+  mutate(sig = case_when(p.value <= 0.05 ~ "Significant",
+                         TRUE ~ "Not significant")) |>
+  ggplot(aes(x = fct_reorder(predictor, estimate))) +
+  geom_point(aes(y = estimate, color = sig)) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high, color = sig), width = .1) +
+  labs(title = "EFA Residual Correlation Plot: Job satisfaction & quit status",
+       x = NULL, y = NULL) +
+  scale_color_manual(name = "p Value",
+                     values = c("gray", "red")) +
+  theme(axis.text.x = element_text(
+    angle = 90,
+    vjust = 0.5,
+    hjust = 1
+  )) 
+```
+
+------------------------------------------------------------------------
+
+## Organizational Characteristics
+
+```{r}
+## Determine the number of factors to extract
+VSS.scree(dat |>
+            select(starts_with("org_")))
+
+q20.par <- fa.parallel(dat |>
+                         select(starts_with("org_")),
+                       fa = "fa",
+                       plot = FALSE)
+
+VSS(dat |>
+      select(starts_with("org_")),
+    n = q20.par$nfact,
+    rotate = "varimax")
+
+## Conduct EFA analysis with nfactors determined from methods above
+q20.efa <-
+  fa(dat |>
+      select(starts_with("org_")),
+     fm = "pa",
+     nfactors = q20.par$nfact,
+     rotate = "varimax")
+
+## Bind factor scores to dataset
+dat <- dat |>
+  cbind(
+    factor.scores(dat |> select(starts_with("org_")), q20.efa) |>
+      pluck(1) |>
+      as_tibble() |>
+      rename(
+        "efa_org_factor_01" = PA1,
+        "efa_org_factor_02" = PA2,
+        "efa_org_factor_03" = PA3
+      )
+  )
+```
+
+### Summary Output
+
+```{r}
+tab_fa(dat |> select(starts_with("org_")),
+       rotation = "varimax", 
+       method = "pa", 
+       nmbr.fctr = q20.par$nfact, 
+       title = "EFA - Organizational Characteristics"
+       )
+```
+
+### Diagram Output
+
+```{r}
+fa.diagram(q20.efa)
+
+## Clean up
+rm(q20.par)
+```
+
+
+### Residual Correlation Plot
+
+```{r}
+map(
+  dat |>
+    select(
+      gender, age, race, education, experience, salary, anymc, catcap, 
+      medi, rural, nonpro, starts_with("efa_org_")
+    ),
+  cor.test,
+  y = dat$quit
+) |>
+  map_dfr(tidy, .id = "predictor") |>
+  mutate(sig = case_when(p.value <= 0.05 ~ "Significant",
+                         TRUE ~ "Not significant")) |>
+  ggplot(aes(x = fct_reorder(predictor, estimate))) +
+  geom_point(aes(y = estimate, color = sig)) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high, color = sig), width = .1) +
+  labs(title = "EFA Residual Correlation Plot: Organizational characteristics & quit status",
+       x = NULL, y = NULL) +
+  scale_color_manual(name = "p Value",
+                     values = c("gray", "red")) +
+  theme(axis.text.x = element_text(
+    angle = 90,
+    vjust = 0.5,
+    hjust = 1
+  )) 
+```
+
+
+------------------------------------------------------------------------
+
+## Job Stress
+
+```{r}
+## Determine the number of factors to extract
+VSS.scree(dat |>
+            select(starts_with("stress_")))
+
+q26.par <- fa.parallel(dat |>
+                         select(starts_with("stress_")),
+                       fa = "fa",
+                       plot = FALSE)
+
+VSS(select(dat, starts_with("stress_")), 
+    rotate = "varimax")
+
+## Conduct EFA analysis with nfactors determined from methods above
+q26.efa <-
+  fa(dat |>
+      select(starts_with("stress_")),
+     fm = "pa",
+     nfactors = q26.par$nfact,
+     rotate = "varimax")
+
+## Bind factor scores to dataset
+dat <- dat |>
+  cbind(
+      factor.scores(dat |> select(starts_with("stress_")), q26.efa) |>
+      pluck(1) |>
+      as_tibble() |>
+      rename(
+        "efa_stress_factor_01" = PA1,
+        "efa_stress_factor_02" = PA2
+      )
+  )
+```
+
+### Summary Output
+
+```{r}
+tab_fa(dat |> select(starts_with("stress_")),
+       rotation = "varimax", 
+       method = "pa", 
+       nmbr.fctr = q26.par$nfact, 
+       title = "EFA - Job Stress"
+       )
+```
+
+### Diagram Output
+
+```{r}
+fa.diagram(q26.efa)
+
+rm(q26.par)
+```
+
+
+### Residual Correlation Plot
+
+```{r}
+map(
+  dat |>
+    select(
+      gender, age, race, education, experience, salary, anymc, catcap, 
+      medi, rural, nonpro, starts_with("efa_stress_")
+    ),
+  cor.test,
+  y = dat$quit
+) |>
+  map_dfr(tidy, .id = "predictor") |>
+  mutate(sig = case_when(p.value <= 0.05 ~ "Significant",
+                         TRUE ~ "Not significant")) |>
+  ggplot(aes(x = fct_reorder(predictor, estimate))) +
+  geom_point(aes(y = estimate, color = sig)) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high, color = sig), width = .1) +
+  labs(title = "EFA Residual Correlation Plot: Job stress & quit status",
+       x = NULL, y = NULL) +
+  scale_color_manual(name = "p Value",
+                     values = c("gray", "red")) +
+  theme(axis.text.x = element_text(
+    angle = 90,
+    vjust = 0.5,
+    hjust = 1
+  )) 
+```
+
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+
+# Models {.tabset .tabset-pills}
+
+```{r}
+## build model specification
+lr_mod <- logistic_reg() |> 
+  set_engine("glm")
+
+## list control variables
+controls = c("gender", "age", "race", "education", "experience", "salary", "anymc", "catcap", "medi", "rural", "nonpro")
+
+## build model recipes
+rec.ctrl <- dat |> 
+  select(quit, any_of(controls), svy_weight) |> 
+  mutate(svy_weight = frequency_weights(svy_weight)) |>
+  recipe(quit ~ .) |>
+  step_mutate(quit = as.factor(quit))
+
+rec.cfa.jobsat <- dat |> 
+  select(quit, any_of(controls), starts_with("cfa_job_sat_"), svy_weight) |> 
+  mutate(svy_weight = frequency_weights(svy_weight)) |>
+  recipe(quit ~ .) |> 
+  step_mutate(quit = as.factor(quit)) |> 
+  step_mutate(svy_weight = frequency_weights(svy_weight))
+
+rec.cfa.org <- dat |> 
+  select(quit, any_of(controls), starts_with("cfa_org_"), svy_weight) |> 
+  mutate(svy_weight = frequency_weights(svy_weight)) |>
+  recipe(quit ~ .) |> 
+  step_mutate(quit = as.factor(quit)) |> 
+  step_mutate(svy_weight = frequency_weights(svy_weight))
+
+rec.cfa.stress <- dat |> 
+  select(quit, any_of(controls), starts_with("cfa_stress_"), svy_weight) |> 
+  mutate(svy_weight = frequency_weights(svy_weight)) |>
+  recipe(quit ~ .) |> 
+  step_mutate(quit = as.factor(quit)) |> 
+  step_mutate(svy_weight = frequency_weights(svy_weight))
+
+rec.cfa.all <-dat |> 
+  select(quit, any_of(controls), starts_with("cfa_"), svy_weight) |> 
+  mutate(svy_weight = frequency_weights(svy_weight)) |>
+  recipe(quit ~ .) |> 
+  step_mutate(quit = as.factor(quit)) |> 
+  step_mutate(svy_weight = frequency_weights(svy_weight))
+
+rec.efa.jobsat <- dat |> 
+  select(quit, any_of(controls), starts_with("efa_job_sat_"), svy_weight) |> 
+  mutate(svy_weight = frequency_weights(svy_weight)) |>
+  recipe(quit ~ .) |> 
+  step_mutate(quit = as.factor(quit)) |> 
+  step_mutate(svy_weight = frequency_weights(svy_weight))
+
+rec.efa.org <- dat |> 
+  select(quit, any_of(controls), starts_with("efa_org_"), svy_weight) |> 
+  mutate(svy_weight = frequency_weights(svy_weight)) |>
+  recipe(quit ~ .) |> 
+  step_mutate(quit = as.factor(quit)) |> 
+  step_mutate(svy_weight = frequency_weights(svy_weight))
+
+rec.efa.stress <- dat |> 
+  select(quit, any_of(controls), starts_with("efa_stress_"), svy_weight) |> 
+  mutate(svy_weight = frequency_weights(svy_weight)) |>
+  recipe(quit ~ .) |> 
+  step_mutate(quit = as.factor(quit)) |> 
+  step_mutate(svy_weight = frequency_weights(svy_weight))
+
+rec.efa.all <-dat |> 
+  select(quit, any_of(controls), starts_with("efa_"), svy_weight) |> 
+  mutate(svy_weight = frequency_weights(svy_weight)) |>
+  recipe(quit ~ .) |> 
+  step_mutate(quit = as.factor(quit)) |> 
+  step_mutate(svy_weight = frequency_weights(svy_weight))
+
+## build model workflow
+wf <- workflow() |> 
+  add_model(lr_mod)
+
+## control model
+mod.ctrl <- wf |> 
+  add_recipe(rec.ctrl) |> 
+  fit(data = dat) |> 
+  pull_workflow_fit() |> 
+  tbl_regression(exponentiate = TRUE) |> 
+  add_significance_stars(hide_ci = FALSE, hide_p = FALSE)
+
+## cfa models
+mod.cfa.jobsat <- wf |> 
+  add_recipe(rec.cfa.jobsat) |> 
+  fit(data = dat) |> 
+  pull_workflow_fit() |> 
+  tbl_regression(exponentiate = TRUE) |> 
+  add_significance_stars(hide_ci = FALSE, hide_p = FALSE)
+
+mod.cfa.org <- wf |> 
+  add_recipe(rec.cfa.org) |> 
+  fit(data = dat) |> 
+  pull_workflow_fit() |> 
+  tbl_regression(exponentiate = TRUE) |> 
+  add_significance_stars(hide_ci = FALSE, hide_p = FALSE)
+
+mod.cfa.stress <- wf |> 
+  add_recipe(rec.cfa.stress) |> 
+  fit(data = dat) |> 
+  pull_workflow_fit() |> 
+  tbl_regression(exponentiate = TRUE) |> 
+  add_significance_stars(hide_ci = FALSE, hide_p = FALSE)
+
+mod.cfa.all <- wf |> 
+  add_recipe(rec.cfa.all) |> 
+  fit(data = dat) |> 
+  pull_workflow_fit() |> 
+  tbl_regression(exponentiate = TRUE) |> 
+  add_significance_stars(hide_ci = FALSE, hide_p = FALSE)
+
+mod.cfa <- tbl_merge(tbls = list(mod.ctrl, mod.cfa.jobsat, mod.cfa.org, mod.cfa.stress, mod.cfa.all))
+
+## efa models
+mod.efa.jobsat <- wf |> 
+  add_recipe(rec.efa.jobsat) |> 
+  fit(data = dat) |> 
+  pull_workflow_fit() |> 
+  tbl_regression(exponentiate = TRUE) |> 
+  add_significance_stars(hide_ci = FALSE, hide_p = FALSE)
+
+mod.efa.org <- wf |> 
+  add_recipe(rec.efa.org) |> 
+  fit(data = dat) |> 
+  pull_workflow_fit() |> 
+  tbl_regression(exponentiate = TRUE) |> 
+  add_significance_stars(hide_ci = FALSE, hide_p = FALSE)
+
+mod.efa.stress <- wf |> 
+  add_recipe(rec.efa.stress) |> 
+  fit(data = dat) |> 
+  pull_workflow_fit() |> 
+  tbl_regression(exponentiate = TRUE) |> 
+  add_significance_stars(hide_ci = FALSE, hide_p = FALSE)
+
+mod.efa.all <- wf |> 
+  add_recipe(rec.efa.all) |> 
+  fit(data = dat) |> 
+  pull_workflow_fit() |> 
+  tbl_regression(exponentiate = TRUE) |> 
+  add_significance_stars(hide_ci = FALSE, hide_p = FALSE)
+
+mod.efa <- tbl_merge(tbls = list(mod.ctrl, mod.efa.jobsat, mod.efa.org, mod.efa.stress, mod.efa.all))
+```
+
+
+## CFA Models
+
+```{r}
+mod.cfa
+```
+
+
+## EFA Models
+
+```{r}
+mod.efa
+```
+
+
+```{r}
+## clean up
+rm(lr_mod, rec.cfa.all, rec.cfa.jobsat, rec.cfa.org, rec.cfa.stress, rec.ctrl, rec.efa.all, rec.efa.jobsat, rec.efa.org, rec.efa.stress, wf)
+```
+
+
+
+
+# Models 2 {.tabset .tabset-pills}
+
+```{r}
+## list control variables
+controls = c("gender", "age", "race", "education", "experience", "salary", "anymc", "catcap", "medi", "rural", "nonpro")
+```
+
+
+## Model - Dummies
+
+```{r}
+mod.ctrl <- glm(quit ~ ., 
+                data = dat |> 
+                  select(quit, any_of(controls), svy_weight) |> 
+                  mutate(across(-c(quit, svy_weight), ~as.factor(.))), 
+                weights = svy_weight)
+
+mod.pred <- glm(quit ~ ., 
+                data = dat |> 
+                  select(quit, any_of(controls), starts_with("org_itq_"), svy_weight), 
+                weights = svy_weight)
+
+tbl_merge(tbls = list(
+  tbl_regression(mod.ctrl, exponentiate = TRUE), 
+  tbl_regression(mod.pred, exponentiate = TRUE)
+)
+)
+```
+
+
+## All subsets regression
+
+```{r}
+## Detect core count
+nCores <- min(parallel::detectCores(), 8)
+## Used by parallel::mclapply() as default
+options(mc.cores = nCores)
+## Used by doParallel as default
+options(cores = nCores)
+## Register doParallel as the parallel backend with foreach
+## http://stackoverflow.com/questions/28989855/the-difference-between-domc-and-doparallel-in-r
+doParallel::registerDoParallel(cores = nCores)
+## Report multicore use
+cat("### Using", foreach::getDoParWorkers(), "cores\n")
+cat("### Using", foreach::getDoParName(), "as backend\n")
+
+dat.active <- read_rds(here("data", "dat_org.rds")) |> 
+  filter(resp == 1) |> 
+  filter(is.na(no_admin_record)) |> 
+  select(quit, 
+         experience, gender, age, race, education, salary, 
+         anymc, catcap, medi, rural, nonpro, 
+         starts_with("q5"), starts_with("q6"), starts_with("q10a"), 
+         starts_with("q11"), starts_with("q12"), starts_with("q13"), 
+         starts_with("q14"), starts_with("q15"), starts_with("q16"), 
+         starts_with("q17"), starts_with("q18"), starts_with("q19"), 
+         starts_with("q20"), starts_with("q23"), starts_with("q24"), 
+         starts_with("q25"), starts_with("q26")) |> 
+  mutate(across(everything(), ~ case_when(is.na(.) ~ 0, 
+                                          TRUE ~ .)))
+
+fit <- glm(quit ~ ., data = dat.active, family = 'binomial')
+
+MASS::stepAIC(fit, direction = 'both')
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

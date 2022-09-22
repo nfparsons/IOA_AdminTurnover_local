@@ -1,0 +1,20 @@
+{\rtf1\ansi\deff0 {\fonttbl{\f0\fnil Garamond;}}
+{\info {\author .}{\company .}{\title .}}
+\deflang1033\plain\fs20
+{\footer\pard\qc\plain\f0\fs20\chpgn\par}
+{
+{\b\qc\line  }{\par}
+\fs20 {Test scale = mean(unstandardized items)}\line
+\fs20 {Average interitem covariance:     .4805338}\line
+\fs20 {Number of items in the scale:           14}\line
+\fs20 {Scale reliability coefficient:      0.9332}\line
+
+{\b\qc\line  }{\par}
+\fs20 {Test scale = mean(unstandardized items)}\line
+\fs20 {Average interitem covariance:     .4805338}\line
+\fs20 {Number of items in the scale:           14}\line
+\fs20 {Scale reliability coefficient:      0.9332}\line
+
+
+\writepositionforappend
+}}

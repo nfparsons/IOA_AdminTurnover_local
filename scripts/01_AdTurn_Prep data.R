@@ -1,0 +1,766 @@
+## load survey data
+### first read_dta loads and transforms completed surveys
+dat <- read_dta("data/AdminTurnover_Survey_Data_012721_020221_USE_THIS.dta") |>
+  select(-ends_with("_TEXT")) |>
+  clean_names() |>
+  mutate(across(everything(), ~ str_trim(.)),
+         across(everything(), ~ tolower(.))) |>
+  na_if(-99) |>
+  mutate(
+    opendate = as_date(opendate), 
+    across(starts_with("q"), ~ as.numeric(.))
+  ) |> 
+  
+  ## join turnover data
+  left_join(
+    read_excel(here("data", "AdTurn List 021622.xlsx")) |>
+      ## clean up variable names
+      clean_names() |>
+      rename_all(tolower) |>
+      ## reformat name strings
+      mutate(
+        across(everything(), ~ str_trim(.)),
+        across(everything(), ~ tolower(.))
+      ) |>
+      ## remove no_admin_record = 'exclude'
+      filter(is.na(no_admin_record)) |>
+      select(ccmu1, firstname, lastname, check1, started, ended_100121),
+    by = c(
+      "ccmu" = "ccmu1",
+      "firstname" = "firstname",
+      "lastname" = "lastname"
+    )
+  ) |> 
+  
+  ## join facility turnover data
+  left_join(
+    read_excel(here("data", "CBC Administrator List 01010-062519_032720_021522.xlsx")) |> 
+      ## clean up variable names
+      clean_names() |> 
+      rename_all(tolower) |> 
+      ## reformat name strings
+      mutate(
+        across(everything(), ~str_trim(.)), 
+        across(everything(), ~tolower(.))
+      ) |> 
+      left_join(
+        read_excel(here("data", "CBC Administrator List 01010-062519_032720_021522.xlsx")) |> 
+          ## clean up variable names
+          clean_names() |> 
+          rename_all(tolower) |>
+          ## reformat name strings
+          mutate(
+            across(everything(), ~str_trim(.)), 
+            across(everything(), ~tolower(.))
+          ) |>
+          ## calculate the turnover ratio
+          group_by(facid) |> 
+          summarize(facility_n = n(), 
+                    early = min(started)) |> 
+          ungroup() |> 
+          mutate(start_year = lubridate::year(lubridate::ymd(early)), 
+                 end_year = 2021, 
+                 span = end_year - start_year, 
+                 turnover_ratio = facility_n / span), 
+        by = ("facid")
+      ) |> 
+      select(facid, admfirst, admlast, start_year, end_year, span, turnover_ratio), 
+    by = c("ccmu" = "facid", 
+           "firstname" = "admfirst", 
+           "lastname" = "admlast")
+  )
+
+dat <- dat |> 
+  ## clean up 
+  distinct() |> 
+  rename(fac_opendate = opendate, 
+         employee_start = started, 
+         employee_left = ended_100121, 
+         fac_openyear = start_year, 
+         fac_closeyear = end_year) |> 
+  
+  ## categorize continuous variables 
+  mutate(
+    quit = case_when(!is.na(employee_left) ~ 1,
+                     TRUE ~ 0),
+    turnover_ratio = case_when(
+      turnover_ratio <= .25 ~ 1, 
+      turnover_ratio > .25 & turnover_ratio <= .50 ~ 2, 
+      turnover_ratio > .50 & turnover_ratio <= .75 ~ 3, 
+      turnover_ratio > .75 & turnover_ratio <= 1.0 ~ 4, 
+      turnover_ratio > 1.0 ~ 5, 
+      TRUE ~ NA_real_
+    ),
+    across(c(anymc, medi, nonpro, finished, resp), ~ as.numeric(.)), 
+    catcap = case_when(
+      catcap == 0 ~ 1,
+      catcap == 1 ~ 2,
+      catcap == 2 ~ 3,
+      catcap == 3 ~ 4,
+      TRUE ~ NA_real_
+    ),
+    rural = case_when(
+      rural == 0 ~ 1, 
+      rural == 1 ~ 2, 
+      rural == 2 ~ 3, 
+      TRUE ~ NA_real_
+    ), 
+    q1 = case_when(
+      q1 == 1 ~ 1, # Male
+      q1 == 2 ~ 2, # Female
+      q1 == 3 ~ 0, # Prefer to self-describe
+      q1 == 4 ~ 0, # Prefer not to answer
+      TRUE ~ NA_real_
+    ),
+    q2 = case_when(
+      q2 < 20 ~ 1,
+      q2 >= 20 & q2 < 30 ~ 2,
+      q2 >= 30 & q2 < 40 ~ 3,
+      q2 >= 40 & q2 < 50 ~ 4,
+      q2 >= 50 & q2 < 60 ~ 5,
+      q2 >= 60 & q2 < 70 ~ 6,
+      q2 >= 70 ~ 7, 
+      TRUE ~ NA_real_
+    ),
+    q3a = case_when(
+      q3_1 == 1 & q3_2 == 0 & q3_3 == 0 & q3_5 == 0 & q3_6 == 0 & q3_7 == 0 ~ 1, 
+      q3_1 == 0 & q3_2 == 1 & q3_3 == 0 & q3_5 == 0 & q3_6 == 0 & q3_7 == 0 ~ 2, 
+      q3_1 == 0 & q3_2 == 0 & q3_3 == 1 & q3_5 == 0 & q3_6 == 0 & q3_7 == 0 ~ 3, 
+      q3_1 == 0 & q3_2 == 0 & q3_3 == 0 & q3_5 == 1 & q3_6 == 0 & q3_7 == 0 ~ 4, 
+      q3_1 == 0 & q3_2 == 0 & q3_3 == 0 & q3_5 == 0 & q3_6 == 1 & q3_7 == 0 ~ 5, 
+      q3_1 == 0 & q3_2 == 0 & q3_3 == 0 & q3_5 == 0 & q3_6 == 0 & q3_7 == 1 ~ 6, 
+      q3_1 == 0 & q3_2 == 0 & q3_3 == 0 & q3_5 == 0 & q3_6 == 0 & q3_7 == 0 ~ NA_real_,
+      TRUE ~ 7
+    ), 
+    q3b = case_when(
+      q3_4 == 1 ~ 1, 
+      TRUE ~ 0
+    ),
+    q7 = case_when(
+      q7 == 1 ~ 4, 
+      q7 == 2 ~ 3, 
+      q7 == 3 ~ 2, 
+      q7 == 4 ~ 1, 
+      TRUE ~ NA_real_
+    ), 
+    q10a = case_when(
+      q10a == 2 ~ 0, 
+      q10a == 1 ~ 1, 
+      TRUE ~ NA_real_
+    ), 
+    q11 = case_when(
+      q11 == 20192020 ~ 2, 
+      q11 == 2017 ~ 3, 
+      q11 < 1 ~ 1, 
+      q11 >= 1 & q11 < 2 ~ 2, 
+      q11 >= 2 & q11 < 5 ~ 3, 
+      q11 > 5 ~ 4,
+      TRUE ~ NA_real_
+    ), 
+    q12 = case_when(
+      q12 == 1 ~ 1, 
+      q12 == 2 ~ 0, 
+      TRUE ~ NA_real_
+    ), 
+    q13 = case_when(
+      q13_1 == 1 & is.na(q13_2) ~ 1, ## Assisted Living
+      q13_2 == 1 & is.na(q13_1) ~ 2, ## Memory Care
+      q13_1 == 1 & q13_2 == 1 ~ 3, ## Assisted Living and Memory Care
+      q13_3 == 1 ~ 4, ## No, first community
+      TRUE ~ NA_real_
+    ), 
+    q15_1 = case_when(
+      q15_1 == 0 ~ 0, # No answer
+      q15_1 == 1 ~ 1, # Yes
+      q15_1 == 2 ~ 0, # No
+      TRUE ~ NA_real_
+    ),
+    q15_2 = case_when(
+      q15_2 == 0 ~ 0, # No answer
+      q15_2 == 1 ~ 1, # Yes
+      q15_2 == 2 ~ 0, # No
+      TRUE ~ NA_real_
+    ),
+    q15_3 = case_when(
+      q15_3 == 0 ~ 0, # No answer
+      q15_3 == 1 ~ 1, # Yes
+      q15_3 == 2 ~ 0, # No
+      TRUE ~ NA_real_
+    ),
+    q15_4 = case_when(
+      q15_4 == 0 ~ 0, # No answer
+      q15_4 == 1 ~ 1, # Yes
+      q15_4 == 2 ~ 0, # No
+      TRUE ~ NA_real_
+    ),
+    q15_5 = case_when(
+      q15_5 == 0 ~ 0, # No answer
+      q15_5 == 1 ~ 1, # Yes
+      q15_5 == 2 ~ 0, # No
+      TRUE ~ NA_real_
+    ),
+    q15_6 = case_when(
+      q15_6 == 0 ~ 0, # No answer
+      q15_6 == 1 ~ 1, # Yes
+      q15_6 == 2 ~ 0, # No
+      TRUE ~ NA_real_
+    ),
+    q15_7 = case_when(
+      q15_7 == 0 ~ 0, # No answer
+      q15_7 == 1 ~ 1, # Yes
+      q15_7 == 2 ~ 0, # No
+      TRUE ~ NA_real_
+    ),
+    q16 = case_when(
+      q16 < 9.5 ~ 1, 
+      q16 >= 9.5 & q16 < 15 ~ 2, 
+      q16 >= 15 & q16 < 22 ~ 3, 
+      q16 >= 22 ~ 4, 
+      TRUE ~ NA_real_
+    ),
+    q17 = case_when(
+      q17 == 6 ~ 0, 
+      q17 == 7 ~ 0, 
+      TRUE ~ q17
+    ),
+    across(starts_with("q18_"), ~ replace(., . == 2, 0)), 
+    across(starts_with("q18_"), ~ replace(., . == 3, NA)), 
+    across(starts_with("q19_"), ~ replace(., . == 6, 0)), 
+    q21 = case_when(q21 == 2 ~ 0, 
+                    TRUE ~ q21),
+    q23 = case_when(q23 == 5 ~ 1,
+                    q23 == 4 ~ 2,
+                    q23 == 3 ~ 3,
+                    q23 == 2 ~ 4,
+                    q23 == 1 ~ 5,
+                    TRUE ~ NA_real_),
+    
+    q24 = case_when(q24 == 5 ~ 1,
+                    q24 == 4 ~ 2,
+                    q24 == 3 ~ 3,
+                    q24 == 2 ~ 4,
+                    q24 == 1 ~ 5,
+                    TRUE ~ NA_real_),
+    
+    q25 = case_when(q25 == 5 ~ 1,
+                    q25 == 4 ~ 2,
+                    q25 == 3 ~ 3,
+                    q25 == 2 ~ 4,
+                    q25 == 1 ~ 5,
+                    TRUE ~ NA_real_)
+  ) 
+
+dat <- dat |> 
+  transmute(
+    id = order012621, 
+    resp = resp,
+    firstname = firstname, 
+    lastname = lastname, 
+    position = q10a, 
+    employee_start = employee_start, 
+    employee_left = employee_left, 
+    quit = factor(quit, 
+                  levels = c(0, 1), 
+                  labels = c("Didn't quit", "Quit")), 
+    ccmu = ccmu, 
+    county = county, 
+    fac_opendate = fac_opendate, 
+    fac_openyear = fac_openyear, 
+    fac_closeyear = fac_closeyear, 
+    span = span, 
+    turnover_ratio = factor(turnover_ratio, 
+                            levels = c(1, 2, 3, 4, 5), 
+                            labels = c("< 1/4", "1/4-1/2", "1/2-3/4", "3/4-1", 
+                                       "> 1"), 
+                            ordered = TRUE), 
+    catcap = factor(catcap, 
+                    levels = c(1,2,3,4), 
+                    labels = c("Small (6-24)", "Medium (25-49)", 
+                               "Large (50-74)", "Very large (75+)"), 
+                    ordered = TRUE), 
+    rural = factor(rural, 
+                   levels = c(1, 2, 3), 
+                   labels = c("Urban", "Rural", "Frontier")), 
+    anymc = factor(anymc, 
+                   levels = c(0,1), 
+                   labels = c("No", "Yes")), 
+    medi = factor(medi, 
+                  levels = c(0,1), 
+                  labels = c("No", "Yes")),
+    q1 = factor(q1, 
+                levels = c(0,1,2), 
+                labels = c("Prefer not to answer/self-describe", "Male", "Female")), 
+    q2 = factor(q2, 
+                levels = c(1,2,3,4,5,6,7), 
+                labels = c("< 20", "20-29", "30-39", "40-49", "50-59", "60-69", 
+                           "70+"), 
+                ordered = TRUE), 
+    q3a = factor(q3a, 
+                 levels = c(1,2,3,4,5,6,7), 
+                 labels = c("American Indian or Alaska Native", 
+                            "Asian", "Black or African American", 
+                            "Native Hawaiian or Other Pacific Islander", 
+                            "White", "Other", "Multiple")), 
+    q3b = factor(q3b, 
+                 levels = c(0, 1), 
+                 labels = c("Not Hispanic", "Hispanic")), 
+    q4 = factor(q4, 
+                levels = c(1,2,3,4,5,6,7), 
+                labels = c("High school diploma or equivalent (such as GED)", 
+                           "Some college credit, but not degree", 
+                           "Associate's degree (for example: AA, AS)", 
+                           "Bachelor's degree (for example: BA, BS)", 
+                           "Master's degree (for example: MA, MS, MEng, MSW, MBA)", 
+                           "Professional degree beyond a Bachelor's Degree (for example: MD, JD)", 
+                           "Doctorate degree (for example: PhD, EdD)"), 
+                ordered = TRUE), 
+    q9_1 = factor(q9_1, 
+                  levels = c(1,2,3,4,5), 
+                  labels = c("Strongly disagree", "Disagree", 
+                             "Neither agree nor disagree", 
+                             "Agree", "Strongly agree"), 
+                  ordered = TRUE), 
+    q9_2 = factor(q9_2, 
+                  levels = c(1,2,3,4,5), 
+                  labels = c("Strongly disagree", "Disagree", 
+                             "Neither agree nor disagree", 
+                             "Agree", "Strongly agree"), 
+                  ordered = TRUE),
+    q9_3 = factor(q9_3, 
+                  levels = c(1,2,3,4,5), 
+                  labels = c("Strongly disagree", "Disagree", 
+                             "Neither agree nor disagree", 
+                             "Agree", "Strongly agree"), 
+                  ordered = TRUE),
+    q9_4 = factor(q9_4, 
+                  levels = c(1,2,3,4,5), 
+                  labels = c("Strongly disagree", "Disagree", 
+                             "Neither agree nor disagree", 
+                             "Agree", "Strongly agree"), 
+                  ordered = TRUE),
+    q9_5 = factor(q9_5, 
+                  levels = c(1,2,3,4,5), 
+                  labels = c("Strongly disagree", "Disagree", 
+                             "Neither agree nor disagree", 
+                             "Agree", "Strongly agree"), 
+                  ordered = TRUE),
+    q10a = factor(q10a, 
+                  levels = c(0, 1), 
+                  labels = c("No ownership", "Partial or full ownership")), 
+    q11 = factor(q11, 
+                 levels = c(1,2,3,4), 
+                 labels = c("< 1 year", "1-2 years", "2-5 years", "5+ years"), 
+                 ordered = TRUE), 
+    q12 = factor(q12, 
+                 levels = c(0,1), 
+                 labels = c("No, worked as admin only", "Yes, had previous position")), 
+    q13 = factor(q13, 
+                 levels = c(1,2,3,4), 
+                 labels = c("Assisted living", "Memory care", "Assisted living and memory care", "No, first community")), 
+    q14 = factor(q14, 
+                 levels = c(1,2,3,4,5), 
+                 labels = c("I transferred to this community in the same organization", 
+                            "I quit", "I was laid off", "It closed", "Other reason")), 
+    q15_1 = factor(q15_1, 
+                   levels = c(0,1), 
+                   labels = c("No", "Yes")), 
+    q15_2 = factor(q15_2, 
+                   levels = c(0,1) ,
+                   labels = c("No", "Yes")), 
+    q15_3 = factor(q15_3, 
+                   levels = c(0,1), 
+                   labels = c("No", "Yes")), 
+    q15_4 = factor(q15_4, 
+                   levels = c(0,1), 
+                   labels = c("No", "Yes")), 
+    q15_5 = factor(q15_5, 
+                   levels = c(0,1), 
+                   labels = c("No", "Yes")),
+    q15_6 = factor(q15_6, 
+                   levels = c(0,1), 
+                   labels = c("No", "Yes")),
+    q15_7 = factor(q15_7, 
+                   levels = c(0,1), 
+                   labels = c("No", "Yes")),
+    q16 = factor(q16, 
+                 levels = c(1,2,3,4), 
+                 labels = c("Less than 9.5 years", "9.5-15 years", 
+                            "15-22 years", "22+ years"), 
+                 ordered = TRUE), 
+    q17 = factor(q17, 
+                 levels = c(0,1,2,3,4,5), 
+                 labels = c("Other or prefer not to answer", 
+                            "Less than or equal to $24,999", 
+                            "$25,000 to $49,999", 
+                            "$50,000 to $74,999", 
+                            "$75,000 to $99,999", 
+                            "$100,000 or greater"), 
+                 ordered = TRUE), 
+    q18_1 = factor(q18_1, 
+                   levels = c(0,1), 
+                   labels = c("No", "Yes")), 
+    q18_2 = factor(q18_2, 
+                   levels = c(0,1), 
+                   labels = c("No", "Yes")), 
+    q18_3 = factor(q18_3, 
+                   levels = c(0,1), 
+                   labels = c("No", "Yes")), 
+    q18_4 = factor(q18_4, 
+                   levels = c(0,1), 
+                   labels = c("No", "Yes")), 
+    q18_5 = factor(q18_5, 
+                   levels = c(0,1), 
+                   labels = c("No", "Yes")), 
+    q18_6 = factor(q18_6, 
+                   levels = c(0,1), 
+                   labels = c("No", "Yes")), 
+    q18_7 = factor(q18_7, 
+                   levels = c(0,1), 
+                   labels = c("No", "Yes")), 
+    q18_8 = factor(q18_8, 
+                   levels = c(0,1), 
+                   labels = c("No", "Yes")), 
+    q18_9 = factor(q18_9, 
+                   levels = c(0,1), 
+                   labels = c("No", "Yes")), 
+    q19_01 = factor(q19_1, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Very dissatisfied", "Dissatisfied", 
+                               "Neither satisfied nor dissatisfied", 
+                               "Satisfied", "Very satisfied"), 
+                    ordered = TRUE), 
+    q19_02 = factor(q19_2, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Very dissatisfied", "Dissatisfied", 
+                               "Neither satisfied nor dissatisfied", 
+                               "Satisfied", "Very satisfied"), 
+                    ordered = TRUE), 
+    q19_03 = factor(q19_3, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Very dissatisfied", "Dissatisfied", 
+                               "Neither satisfied nor dissatisfied", 
+                               "Satisfied", "Very satisfied"), 
+                    ordered = TRUE), 
+    q19_04 = factor(q19_4, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Very dissatisfied", "Dissatisfied", 
+                               "Neither satisfied nor dissatisfied", 
+                               "Satisfied", "Very satisfied"), 
+                    ordered = TRUE), 
+    q19_05 = factor(q19_5, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Very dissatisfied", "Dissatisfied", 
+                               "Neither satisfied nor dissatisfied", 
+                               "Satisfied", "Very satisfied"), 
+                    ordered = TRUE), 
+    q19_06 = factor(q19_6, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Very dissatisfied", "Dissatisfied", 
+                               "Neither satisfied nor dissatisfied", 
+                               "Satisfied", "Very satisfied"), 
+                    ordered = TRUE), 
+    q19_07 = factor(q19_7, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Very dissatisfied", "Dissatisfied", 
+                               "Neither satisfied nor dissatisfied", 
+                               "Satisfied", "Very satisfied"), 
+                    ordered = TRUE), 
+    q19_08 = factor(q19_8, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Very dissatisfied", "Dissatisfied", 
+                               "Neither satisfied nor dissatisfied", 
+                               "Satisfied", "Very satisfied"), 
+                    ordered = TRUE), 
+    q19_09 = factor(q19_9, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Very dissatisfied", "Dissatisfied", 
+                               "Neither satisfied nor dissatisfied", 
+                               "Satisfied", "Very satisfied"), 
+                    ordered = TRUE), 
+    q19_10 = factor(q19_10, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Very dissatisfied", "Dissatisfied", 
+                               "Neither satisfied nor dissatisfied", 
+                               "Satisfied", "Very satisfied"), 
+                    ordered = TRUE), 
+    q19_11 = factor(q19_11, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Very dissatisfied", "Dissatisfied", 
+                               "Neither satisfied nor dissatisfied", 
+                               "Satisfied", "Very satisfied"), 
+                    ordered = TRUE), 
+    q19_12 = factor(q19_12, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Very dissatisfied", "Dissatisfied", 
+                               "Neither satisfied nor dissatisfied", 
+                               "Satisfied", "Very satisfied"), 
+                    ordered = TRUE), 
+    q19_13 = factor(q19_13, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Very dissatisfied", "Dissatisfied", 
+                               "Neither satisfied nor dissatisfied", 
+                               "Satisfied", "Very satisfied"), 
+                    ordered = TRUE), 
+    q19_14 = factor(q19_14, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Very dissatisfied", "Dissatisfied", 
+                               "Neither satisfied nor dissatisfied", 
+                               "Satisfied", "Very satisfied"), 
+                    ordered = TRUE), 
+    q20_01 = factor(q20_1, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE), 
+    q20_02 = factor(q20_1, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE), 
+    q20_03 = factor(q20_1, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE), 
+    q20_04 = factor(q20_1, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE), 
+    q20_05 = factor(q20_1, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE), 
+    q20_06 = factor(q20_1, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE), 
+    q20_07 = factor(q20_1, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE), 
+    q20_08 = factor(q20_1, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE), 
+    q20_09 = factor(q20_1, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE), 
+    q20_10 = factor(q20_1, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE), 
+    q20_11 = factor(q20_1, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE), 
+    q20_12 = factor(q20_1, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE), 
+    q20_13 = factor(q20_1, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE), 
+    q20_14 = factor(q20_1, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE), 
+    q20_15 = factor(q20_1, 
+                    levels = c(0,1,2,3,4,5), 
+                    labels = c("NA", "Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE), 
+    q21 = factor(q21, 
+                 levels = c(0,1), 
+                 labels = c("No", "Yes")), 
+    q22_01 = factor(q22_1, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_02 = factor(q22_2, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_03 = factor(q22_3, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_04 = factor(q22_4, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_05 = factor(q22_5, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_06 = factor(q22_6, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_07 = factor(q22_7, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_08 = factor(q22_8, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_09 = factor(q22_9, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_10 = factor(q22_10, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_11 = factor(q22_11, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_12 = factor(q22_12, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_13 = factor(q22_13, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_14 = factor(q22_14, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_15 = factor(q22_15, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_16 = factor(q22_16, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_17 = factor(q22_17, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_18 = factor(q22_18, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_19 = factor(q22_19, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_20 = factor(q22_20, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_21 = factor(q22_21, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_22 = factor(q22_22, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q22_23 = factor(q22_23, 
+                    levels = c(0,1), 
+                    labels = c("No", "Yes")), 
+    q23 = factor(q23, 
+                 levels = c(1,2,3,4,5), 
+                 labels = c("Poor", "Fair", "Good", "Very good", "Excellent"), 
+                 ordered = TRUE), 
+    q24 = factor(q24, 
+                 levels = c(1,2,3,4,5), 
+                 labels = c("Never", "A few times a year", "Monthly", "Weekly", 
+                            "Daily"), 
+                 ordered = TRUE), 
+    q25 = factor(q25, 
+                 levels = c(1,2,3,4,5), 
+                 labels = c("Never", "A few times a year", "Monthly", "Weekly", 
+                            "Daily"), 
+                 ordered = TRUE), 
+    q26_01 = factor(q26_1, 
+                    levels = c(1,2,3,4,5), 
+                    labels = c("Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE),
+    q26_02 = factor(q26_2, 
+                    levels = c(1,2,3,4,5), 
+                    labels = c("Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE),
+    q26_03 = factor(q26_3, 
+                    levels = c(1,2,3,4,5), 
+                    labels = c("Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE),
+    q26_04 = factor(q26_4, 
+                    levels = c(1,2,3,4,5), 
+                    labels = c("Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE),
+    q26_05 = factor(q26_5, 
+                    levels = c(1,2,3,4,5), 
+                    labels = c("Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE),
+    q26_06 = factor(q26_6, 
+                    levels = c(1,2,3,4,5), 
+                    labels = c("Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE),
+    q26_07 = factor(q26_7, 
+                    levels = c(1,2,3,4,5), 
+                    labels = c("Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE),
+    q26_08 = factor(q26_8, 
+                    levels = c(1,2,3,4,5), 
+                    labels = c("Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE),
+    q26_09 = factor(q26_9, 
+                    levels = c(1,2,3,4,5), 
+                    labels = c("Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE),
+    q26_10 = factor(q26_10, 
+                    levels = c(1,2,3,4,5), 
+                    labels = c("Strongly disagree", "Disagree", 
+                               "Neither agree nor disagree", 
+                               "Agree", "Strongly agree"), 
+                    ordered = TRUE)
+  ) 
+
+dat <- dat |> 
+  ## create dummies
+  dummy_cols(select_columns = c("q19_01", "q19_02", "q19_03", "q19_04", "q19_05", 
+                                "q19_06", "q19_07", "q19_08", "q19_09", "q19_10", 
+                                "q19_11", "q19_12", "q19_13", "q19_14", 
+                                "q20_01", "q20_02", "q20_03", "q20_04", "q20_05", 
+                                "q20_06", "q20_07", "q20_08", "q20_09", "q20_10", 
+                                "q20_11", "q20_12", "q20_13", "q20_14", 
+                                "q20_15", 
+                                "q26_01", "q26_02", "q26_03", "q26_04", "q26_05", 
+                                "q26_06", "q26_07", "q26_08", "q26_09", "q26_10"), 
+             ignore_na = TRUE,
+             remove_selected_columns = TRUE) |> 
+  select(!ends_with("_NA"))
+
+write_rds(
+  dat, 
+  here("data", "AdTurn_clean.rds")
+)

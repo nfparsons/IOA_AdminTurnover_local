@@ -1,0 +1,5944 @@
+---
+title: "Oregon Community-Based Care Administrative Turnover Study"
+format: 
+  html: default
+  docx: 
+    toc: false
+    number-sections: false
+    reference-doc: reference-document.docx
+editor: source
+execute: 
+  echo: false
+  warning: false
+  error: false
+always_allow_html: true
+---
+
+```{r}
+#| label: packages
+
+if (!require("pacman")) 
+  install.packages("pacman", repos = "https://cran.rstudio.org")
+
+p_load(
+  ## file format packages
+  haven, 
+  readxl, 
+  
+  ## janitorial packages
+  here, 
+  skimr, 
+  janitor, 
+  scales, 
+  naniar, 
+  labelled, 
+  showtext, 
+  lubridate, 
+  tidyverse, 
+  
+  ## layout packages
+  flextable, 
+  knitr, 
+  kableExtra
+  )
+```
+
+```{r}
+#| label: data load, selection, and prep
+
+rm(list = ls())
+
+## Load survey data
+data.survey <-
+  read_dta("data/AdminTurnover_Survey_Data_012721_020221_USE_THIS.dta") |>
+  ## clean up variable names
+  clean_names() |> 
+  rename_all(tolower) |> 
+  ## reformat name strings
+  mutate(
+    across(everything(), ~str_trim(.)), 
+    across(everything(), ~tolower(.))
+  ) |>
+  ## so some column name housekeeping
+  rename("survey_start" = "start_date", 
+         "survey_end" = "end_date", 
+         "survey_finished" = "finished") 
+
+
+## Admin turnover data
+data.adturn <- 
+  read_excel(here("data", "AdTurn List 021622.xlsx")) |>
+      ## clean up variable names
+      clean_names() |> 
+      rename_all(tolower) |> 
+      ## reformat name strings
+      mutate(
+        across(everything(), ~str_trim(.)), 
+        across(everything(), ~tolower(.))
+      ) |> 
+      ## remove no_admin_record = 'exclude'
+      filter(is.na(no_admin_record))
+
+  
+## load Facility turnover data
+data.facility <- 
+  read_excel(here("data", "CBC Administrator List 01010-062519_032720_021522.xlsx")) |> 
+      ## clean up variable names
+      clean_names() |> 
+      rename_all(tolower) |> 
+      ## reformat name strings
+      mutate(
+        across(everything(), ~str_trim(.)), 
+        across(everything(), ~tolower(.))
+      ) |> 
+      left_join(
+        read_excel(here("data", "CBC Administrator List 01010-062519_032720_021522.xlsx")) |> 
+          ## clean up variable names
+          clean_names() |> 
+          rename_all(tolower) |>
+          ## reformat name strings
+          mutate(
+            across(everything(), ~str_trim(.)), 
+            across(everything(), ~tolower(.))
+          ) |>
+          ## calculate the turnover ratio
+          group_by(facid) |> 
+          summarize(facility_n = n(), 
+                  early = min(started)) |> 
+          ungroup() |> 
+          mutate(start_year = lubridate::year(lubridate::ymd(early)), 
+                end_year = 2021, 
+                span = end_year - start_year, 
+                turnover_ratio = facility_n / span), 
+        by = ("facid")
+        )
+
+
+data.org <- data.survey |> 
+  left_join(data.adturn, 
+            by = c("ccmu" = "ccmu1", 
+                   "firstname" = "firstname", 
+                   "lastname" = "lastname")
+            ) |> 
+  left_join(data.facility, 
+            by = c("ccmu" = "facid", 
+                   "firstname" = "admfirst", 
+                   "lastname" = "admlast")
+            ) |> 
+  rename("start_date_self_report" = "started.x", 
+         "start_date_dhs" = "started.y", 
+         "end_date_self_report" = "ended_100121", 
+         "end_date_dhs" = "end", 
+         "municipality" = "name", 
+         "service_area" = "service_area1082020", 
+         "fac_county" = "county_2") |> 
+  ## select columns
+  select(!ends_with("_text") & !starts_with("q4a")) |> 
+  mutate(
+    across(
+      c(
+        resp, survey_finished, catcap, anymc, medi, rural, nonpro,
+        q1,
+        q2, 
+        q3_1, q3_2, q3_3, q3_4, q3_5, q3_6, q3_7,
+        q4, 
+        q5_1, q5_2, q5_3, q5_4, q5_5,
+        q6_1, q6_2, q6_3, q6_4, q6_5, q6_6,
+        q7,
+        q8_1, q8_2, q8_3, q8_4, q8_5,
+        q9_1, q9_2, q9_3, q9_4, q9_5,
+        q10, q10a,
+        q11,
+        q12,
+        q13_1, q13_2, q13_3,
+        q14,
+        q15_1, q15_2, q15_3, q15_4, q15_5, q15_6, q15_7,
+        q16,
+        q17,
+        q18_1, q18_2, q18_3, q18_4, q18_5, q18_6, q18_7, q18_8, q18_9,
+        q19_1, q19_2, q19_3, q19_4, q19_5, q19_6, q19_7, q19_8, q19_9, q19_10,
+        q19_11, q19_12, q19_13, q19_14,
+        q20_1, q20_2, q20_3, q20_4, q20_5, q20_6, q20_7, q20_8, q20_9, q20_10,
+        q20_11, q20_12, q20_13, q20_14, q20_15,
+        q21,
+        q22_1, q22_2, q22_3, q22_4, q22_5, q22_6, q22_7, q22_8, q22_9, q22_10,
+        q22_11, q22_12, q22_13, q22_14, q22_15, q22_16, q22_17, q22_18, q22_19,
+        q22_20, q22_21, q22_22, q22_23,
+        q23,
+        q24,
+        q25,
+        q26_1, q26_2, q26_3, q26_4, q26_5, q26_6, q26_7, q26_8, q26_9, q26_10,
+        q27
+      ), ~ as.numeric(.))
+  ) |>
+  # mutate(across(starts_with("q3_"), ~ replace_na(., 0))) |> 
+  mutate(across(everything(), ~ replace(., .x == -99, NA)))
+
+
+data <- data.org |> 
+  transmute(
+    id = response_id, 
+    
+    left_position = case_when(
+      !is.na(end_date_self_report) | !is.na(end_date_dhs) ~ 1, 
+      TRUE ~ 0), 
+    
+    resp = case_when(resp == 1 ~ 1, 
+                     TRUE ~ 0), 
+    
+    survey_finished = survey_finished, 
+    
+    ccmu = ccmu, 
+    
+    catcap = case_when(
+      catcap == 0 ~ 1,
+      catcap == 1 ~ 2, 
+      catcap == 2 ~ 3, 
+      catcap == 3 ~ 4, 
+      TRUE ~ NA_real_
+      ),
+    
+    anymc = anymc, 
+    
+    medi = medi, 
+    
+    rural = case_when(
+      rural == 0 ~ 1, 
+      rural == 1 ~ 2, 
+      rural == 2 ~ 3, 
+      TRUE ~ NA_real_
+      ), 
+    
+    nonpro = nonpro, 
+    
+    gender = q1, 
+    
+    age = q2, 
+    
+    race = case_when(
+      q3_1 == 1 & is.na(q3_2) & is.na(q3_3) & is.na(q3_5) & is.na(q3_6) & is.na(q3_7) ~ 1, 
+      is.na(q3_1) & q3_2 == 1 & is.na(q3_3) & is.na(q3_5) & is.na(q3_6) & is.na(q3_7) ~ 2, 
+      is.na(q3_1) & is.na(q3_2) & q3_3 == 1 & is.na(q3_5) & is.na(q3_6) & is.na(q3_7) ~ 3, 
+      is.na(q3_1) & is.na(q3_2) & is.na(q3_3) & q3_5 == 1 & is.na(q3_6) & is.na(q3_7) ~ 4, 
+      is.na(q3_1) & is.na(q3_2) & is.na(q3_3) & is.na(q3_5) & q3_6 == 1 & is.na(q3_7) ~ 5, 
+      is.na(q3_1) & is.na(q3_2) & is.na(q3_3) & is.na(q3_5) & is.na(q3_6) & q3_7 == 1 ~ 6, 
+      is.na(q3_1) & is.na(q3_2) & is.na(q3_3) & is.na(q3_5) & is.na(q3_6) & is.na(q3_7) ~ NA_real_,
+      TRUE ~ 7
+    ), 
+    
+    ethnicity = case_when(
+      q3_4 == 1 ~ 1, 
+      TRUE ~ 0
+    ),
+    
+    education = q4, 
+    
+    degree_1 = case_when(
+      q5_1 == 2 ~ 0, 
+      TRUE ~ q5_1
+    ), 
+    degree_2 = case_when(
+      q5_2 == 2 ~ 0, 
+      TRUE ~ q5_2
+    ), 
+    degree_3 = case_when(
+      q5_3 == 2 ~ 0, 
+      TRUE ~ q5_3
+    ), 
+    degree_4 = case_when(
+      q5_4 == 2 ~ 0, 
+      TRUE ~ q5_4
+    ), 
+    degree_5 = case_when(
+      q5_5 == 2 ~ 0, 
+      TRUE ~ q5_5
+    ), 
+    
+    cert_1 = q6_1, 
+    cert_2 = q6_2, 
+    cert_3 = q6_3, 
+    cert_4 = q6_4, 
+    cert_5 = q6_5, 
+    cert_6 = q6_6, 
+    
+    lca_year = case_when(
+      q7 == 1 ~ 4, 
+      q7 == 2 ~ 3, 
+      q7 == 3 ~ 2, 
+      q7 == 4 ~ 1, 
+      TRUE ~ NA_real_
+      ), 
+    
+    trainsat_1 = q8_1, 
+    trainsat_2 = q8_2,
+    trainsat_3 = q8_3,
+    trainsat_4 = q8_4,
+    trainsat_5 = q8_5,
+    
+    trainagree_1 = q9_1, 
+    trainagree_2 = q9_2, 
+    trainagree_3 = q9_3, 
+    trainagree_4 = q9_4, 
+    trainagree_5 = q9_5, 
+    
+    famown = case_when(
+      q10a == 2 ~ 0, 
+      q10a == 1 ~ 1, 
+      TRUE ~ NA_real_
+      ), 
+    
+    adten = case_when(
+      q11 == 20192020 ~ 1, 
+      q11 == 2017 ~ 3, 
+      TRUE ~ q11
+      ), 
+    
+    priorpos = case_when(
+      q12 == 1 ~ 1, 
+      q12 == 2 ~ 0, 
+      TRUE ~ NA_real_
+      ), 
+    
+    prevadmin = case_when(
+      q13_1 == 1 & is.na(q13_2) ~ 1, ## Assisted Living
+      q13_2 == 1 & is.na(q13_1) ~ 2, ## Memory Care
+      q13_1 == 1 & q13_2 == 1 ~ 3, ## Assisted Living and Memory Care
+      q13_3 == 1 ~ 4, ## No, first community
+      TRUE ~ NA_real_
+    ), 
+    
+    reasonleave = q14, 
+    
+    everwork_1 = case_when(
+      q15_1 == 2 ~ 0, 
+      TRUE ~ q15_1),
+    everwork_2 = case_when(
+      q15_2 == 2 ~ 0, 
+      TRUE ~ q15_2), 
+    everwork_3 = case_when(
+      q15_3 == 2 ~ 0, 
+      TRUE ~ q15_3), 
+    everwork_4 = case_when(
+      q15_4 == 2 ~ 0, 
+      TRUE ~ q15_4), 
+    everwork_5 = case_when(
+      q15_5 == 2 ~ 0, 
+      TRUE ~ q15_5), 
+    everwork_6 = case_when(
+      q15_6 == 2 ~ 0, 
+      TRUE ~ q15_6), 
+    everwork_7 = case_when(
+      q15_7 == 2 ~ 0, 
+      TRUE ~ q15_7), 
+    
+    howlong = q16, 
+    
+    salary = q17, 
+    
+    benefits_1 = case_when(
+      q18_1 == 2 ~ 0, 
+      q18_1 == 3 ~ NA_real_, 
+      TRUE ~ q18_1), 
+    benefits_2 = case_when(
+      q18_2 == 2 ~ 0, 
+      q18_2 == 3 ~ NA_real_, 
+      TRUE ~ q18_2), 
+    benefits_3 = case_when(
+      q18_3 == 2 ~ 0, 
+      q18_3 == 3 ~ NA_real_, 
+      TRUE ~ q18_3), 
+    benefits_4 = case_when(
+      q18_4 == 2 ~ 0, 
+      q18_4 == 3 ~ NA_real_, 
+      TRUE ~ q18_4),
+    benefits_5 = case_when(
+      q18_5 == 2 ~ 0, 
+      q18_5 == 3 ~ NA_real_, 
+      TRUE ~ q18_5), 
+    benefits_6 = case_when(
+      q18_6 == 2 ~ 0, 
+      q18_6 == 3 ~ NA_real_, 
+      TRUE ~ q18_6),
+    benefits_7 = case_when(
+      q18_7 == 2 ~ 0, 
+      q18_7 == 3 ~ NA_real_, 
+      TRUE ~ q18_7), 
+    benefits_8 = case_when(
+      q18_8 == 2 ~ 0, 
+      q18_8 == 3 ~ NA_real_, 
+      TRUE ~ q18_8),
+    benefits_9 = case_when(
+      q18_9 == 2 ~ 0, 
+      q18_9 == 3 ~ NA_real_, 
+      TRUE ~ q18_9), 
+    
+    jobsat_1 = case_when(
+      q19_1 == 6 ~ 0, 
+      TRUE ~ q19_1), 
+    jobsat_2 = case_when(
+      q19_2 == 6 ~ 0, 
+      TRUE ~ q19_2), 
+    jobsat_3 = case_when(
+      q19_3 == 6 ~ 0, 
+      TRUE ~ q19_3), 
+    jobsat_4 = case_when(
+      q19_4 == 6 ~ 0, 
+      TRUE ~ q19_4),
+    jobsat_5 = case_when(
+      q19_5 == 6 ~ 0, 
+      TRUE ~ q19_5), 
+    jobsat_6 = case_when(
+      q19_6 == 6 ~ 0, 
+      TRUE ~ q19_6),
+    jobsat_7 = case_when(
+      q19_7 == 6 ~ 0, 
+      TRUE ~ q19_7), 
+    jobsat_8 = case_when(
+      q19_8 == 6 ~ 0, 
+      TRUE ~ q19_8),
+    jobsat_9 = case_when(
+      q19_9 == 6 ~ 0, 
+      TRUE ~ q19_9), 
+    jobsat_10 = case_when(
+      q19_10 == 6 ~ 0, 
+      TRUE ~ q19_10),
+    jobsat_11 = case_when(
+      q19_11 == 6 ~ 0, 
+      TRUE ~ q19_11), 
+    jobsat_12 = case_when(
+      q19_12 == 6 ~ 0, 
+      TRUE ~ q19_12),
+    jobsat_13 = case_when(
+      q19_13 == 6 ~ 0, 
+      TRUE ~ q19_13), 
+    jobsat_14 = case_when(
+      q19_14 == 6 ~ 0, 
+      TRUE ~ q19_14),
+    
+    jobagree_1 = q20_1, 
+    jobagree_2 = q20_2, 
+    jobagree_3 = q20_3, 
+    jobagree_4 = q20_4,
+    jobagree_5 = q20_5, 
+    jobagree_6 = q20_6,
+    jobagree_7 = q20_7, 
+    jobagree_8 = q20_8,
+    jobagree_9 = q20_9, 
+    jobagree_10 = q20_10,
+    jobagree_11 = q20_11, 
+    jobagree_12 = q20_12,
+    jobagree_13 = q20_13, 
+    jobagree_14 = q20_14,
+    jobagree_15 = q20_15, 
+    
+    jobtrain_1 = case_when(
+      is.na(q22_1) ~ 0, 
+      TRUE ~ q22_1), 
+    jobtrain_2 = case_when(
+      is.na(q22_2) ~ 0, 
+      TRUE ~ q22_2), 
+    jobtrain_3 = case_when(
+      is.na(q22_3) ~ 0, 
+      TRUE ~ q22_3), 
+    jobtrain_4 = case_when(
+      is.na(q22_4) ~ 0, 
+      TRUE ~ q22_4), 
+    jobtrain_5 = case_when(
+      is.na(q22_5) ~ 0, 
+      TRUE ~ q22_5), 
+    jobtrain_6 = case_when(
+      is.na(q22_6) ~ 0, 
+      TRUE ~ q22_6), 
+    jobtrain_7 = case_when(
+      is.na(q22_7) ~ 0, 
+      TRUE ~ q22_7), 
+    jobtrain_8 = case_when(
+      is.na(q22_8) ~ 0, 
+      TRUE ~ q22_8), 
+    jobtrain_9 = case_when(
+      is.na(q22_9) ~ 0, 
+      TRUE ~ q22_9), 
+    jobtrain_10 = case_when(
+      is.na(q22_10) ~ 0, 
+      TRUE ~ q22_10), 
+    jobtrain_11 = case_when(
+      is.na(q22_11) ~ 0, 
+      TRUE ~ q22_11), 
+    jobtrain_12 = case_when(
+      is.na(q22_12) ~ 0, 
+      TRUE ~ q22_12), 
+    jobtrain_13 = case_when(
+      is.na(q22_13) ~ 0, 
+      TRUE ~ q22_13), 
+    jobtrain_14 = case_when(
+      is.na(q22_14) ~ 0, 
+      TRUE ~ q22_14), 
+    jobtrain_15 = case_when(
+      is.na(q22_15) ~ 0, 
+      TRUE ~ q22_15), 
+    jobtrain_16 = case_when(
+      is.na(q22_16) ~ 0, 
+      TRUE ~ q22_16), 
+    jobtrain_17 = case_when(
+      is.na(q22_17) ~ 0, 
+      TRUE ~ q22_17), 
+    jobtrain_18 = case_when(
+      is.na(q22_18) ~ 0, 
+      TRUE ~ q22_18), 
+    jobtrain_19 = case_when(
+      is.na(q22_19) ~ 0, 
+      TRUE ~ q22_19), 
+    jobtrain_20 = case_when(
+      is.na(q22_20) ~ 0, 
+      TRUE ~ q22_20), 
+    jobtrain_21 = case_when(
+      is.na(q22_21) ~ 0, 
+      TRUE ~ q22_21), 
+    jobtrain_22 = case_when(
+      is.na(q22_22) ~ 0, 
+      TRUE ~ q22_22), 
+    jobtrain_23 = case_when(is.na(q22_23) ~ 0,
+                            TRUE ~ q22_23),
+    
+    genhealth = case_when(q23 == 5 ~ 1,
+                          q23 == 4 ~ 2,
+                          q23 == 3 ~ 3,
+                          q23 == 2 ~ 4,
+                          q23 == 1 ~ 5,
+                          TRUE ~ NA_real_),
+    
+    feelworry = case_when(q24 == 5 ~ 1,
+                          q24 == 4 ~ 2,
+                          q24 == 3 ~ 3,
+                          q24 == 2 ~ 4,
+                          q24 == 1 ~ 5,
+                          TRUE ~ NA_real_),
+    
+    feeldepressed = case_when(q25 == 5 ~ 1,
+                          q25 == 4 ~ 2,
+                          q25 == 3 ~ 3,
+                          q25 == 2 ~ 4,
+                          q25 == 1 ~ 5,
+                          TRUE ~ NA_real_),
+    
+    jobbarr_1 = q26_1,
+    jobbarr_2 = q26_2,
+    jobbarr_3 = q26_3,
+    jobbarr_4 = q26_4,
+    jobbarr_5 = q26_5,
+    jobbarr_6 = q26_6,
+    jobbarr_7 = q26_7,
+    jobbarr_8 = q26_8,
+    jobbarr_9 = q26_9,
+    jobbarr_10 = q26_10
+  )
+
+## get initial n
+initial_sample <- nrow(data)
+
+## remove non-respondents
+data <- data |> 
+  ## do some cleaning
+  replace_with_na_all(condition = ~ .x %in% c(-99, ""))
+
+## get sample n
+respondent_sample <- nrow(data)
+
+## clean up
+rm(data.adturn, data.facility, data.survey)
+
+## write data
+write_csv(data, here("data", "adturn.csv"))
+
+write_dta(data, here("data", "adturn.dta"))
+```
+
+
+
+```{r}
+#| label: id prep
+# id = response_id
+
+data.table <- tibble(
+    variable = rep(c("id"), each = 1), 
+    question = rep(c("Unique respondent ID"), each = 1)
+    ) |> 
+  left_join(
+    data |>
+      select(id) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |> 
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      TRUE ~ NA_character_
+    ), 
+    freq = as.character(n), 
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+```
+
+
+```{r}
+#| label: resp prep
+# 
+
+temp <- tibble(
+    variable = rep(c("resp"), each = 2), 
+    question = rep(c("Response binary"), each = 2),  
+    response = rep(c(0, 1), times = 1)) |> 
+  left_join(
+    data |>
+      select(resp) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |> 
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing", 
+      response == 0 ~ "[0] Did not respond", 
+      response == 1 ~ "[1] Responded", 
+      TRUE ~ NA_character_
+    ), 
+    freq = as.character(n), 
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: left_position prep
+# left_position = case_when(
+#      !is.na(end_date_self_report) | !is.na(end_date_dhs) ~ 1, 
+#      TRUE ~ 0)
+
+temp <- tibble(
+    variable = rep(c("left_position"), each = 2), 
+    question = rep(c("Did respondent leave position?"), each = 2),  
+    response = rep(c(0, 1), times = 1)) |> 
+  left_join(
+    data |>
+      select(left_position) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |> 
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing", 
+      response == 0 ~ "[0] Did not leave position", 
+      response == 1 ~ "[1] Left position", 
+      TRUE ~ NA_character_
+    ), 
+    freq = as.character(n), 
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: survey_finished prep
+# survey_finished = survey_finished
+
+temp <- tibble(variable = rep(c("survey_finished"), each = 3),
+               question = rep(c("Did respondent complete survey?"), each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(survey_finished) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] Survey Incomplete",
+      response == 1 ~ "[1] Survey Complete",
+      TRUE ~ ""
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: ccmu prep
+# ccmu = ccmu
+
+temp <- tibble(
+    variable = rep(c("ccmu"), each = 1), 
+    question = rep(c("Unique Facility identifier"), each = 1)
+    ) |> 
+  left_join(
+    data |>
+      select(ccmu) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |> 
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      TRUE ~ NA_character_
+    ), 
+    freq = as.character(n), 
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: catcap prep
+# catcap = case_when(
+#      catcap == 0 ~ 1,
+#      catcap == 1 ~ 2, 
+#      catcap == 2 ~ 3, 
+#      catcap == 3 ~ 4, 
+#      TRUE ~ NA_real_
+#      )
+
+temp <- tibble(variable = rep(c("catcap"), each = 5),
+               question = rep(c("Facility capacity"), each = 5), 
+               response = rep(c(NA, 1, 2, 3, 4), times = 1)) |>
+  left_join(
+    data |>
+      select(catcap) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 1 ~ "[1] Small (6-24)",
+      response == 2 ~ "[2] Medium (25-49)",
+      response == 3 ~ "[3] Large (50-74)",
+      response == 4 ~ "[4] Very Large (75+)",
+      TRUE ~ ""
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+  
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: anymc prep
+# anymc = anymc
+
+temp <- tibble(variable = rep(c("anymc"), each = 3),
+               question = rep(c("Does facility perform memory care?"), each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(anymc) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == "0" ~ "[0] No Memory Care",
+      response == "1" ~ "[1] Memory Care",
+      TRUE ~ ""
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: medi prep
+# medi = medi
+
+temp <- tibble(variable = rep(c("medi"), each = 3),
+               question = rep(c("Does facility accept Medicaid?"), each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(medi) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == "0" ~ "[0] No Medicaid",
+      response == "1" ~ "[1] Yes Medicaid",
+      TRUE ~ ""
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: rural prep
+# rural = case_when(
+#      rural == 0 ~ 1, 
+#      rural == 1 ~ 2, 
+#      rural == 2 ~ 3, 
+#      TRUE ~ NA_real_
+#      )
+
+temp <- tibble(variable = rep(c("rural"), each = 4),
+               question = rep(c("Is facility rural?"), each = 4), 
+               response = rep(c(NA, 1, 2, 3), times = 1)) |>
+  left_join(
+    data |>
+      select(rural) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == "1" ~ "[1] Urban",
+      response == "2" ~ "[2] Rural",
+      response == "3" ~ "[3] Frontier", 
+      TRUE ~ ""
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: nonpro prep
+# nonpro = nonpro
+
+temp <- tibble(variable = rep(c("nonpro"), each = 3),
+               question = rep(c("Is facility nonprofit?"), each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(nonpro) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == "0" ~ "[0] Not nonprofit",
+      response == "1" ~ "[1] Nonprofit",
+      TRUE ~ ""
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: gender prep
+# gender = q1
+
+temp <- tibble(variable = rep(c("gender"), each = 5),
+               question = rep(c("Q1. What gender is the respondent?"), each = 5), 
+               response = rep(c(NA, 1, 2, 3, 4), times = 1)) |>
+  left_join(
+    data |>
+      select(gender) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == "1" ~ "[1] Male",
+      response == "2" ~ "[2] Female",
+      response == "3" ~ "[3] Prefer to self_describe",
+      response == "4" ~ "[4] Prefer not to answer",
+      TRUE ~ ""
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: age prep
+# age = q2
+
+temp <- tibble(variable = rep(c("age"), each = 1),
+               question = rep(c("Q2. Age of respondent?"), each = 1)) |>
+  bind_cols(data |>
+              select(age) |>
+              summarize(
+                n = n(),
+                mean = round(mean(as.numeric(age), na.rm = T), 1),
+                sd = round(sd(as.numeric(age), na.rm = T), 1)
+              )
+            ) |> 
+  transmute(
+    variable = variable,
+    question = question,
+    label = c(""),
+    freq = as.character(n),
+    mean = str_glue("{mean}"),
+    sd = str_glue("({sd})")
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: race prep
+# race = case_when(
+#      q3_1 == 1 & is.na(q3_2) & is.na(q3_3) & is.na(q3_5) & is.na(q3_6) & is.na(q3_7) ~ 1, 
+#      is.na(q3_1) & q3_2 == 1 & is.na(q3_3) & is.na(q3_5) & is.na(q3_6) & is.na(q3_7) ~ 2, 
+#      is.na(q3_1) & is.na(q3_2) & q3_3 == 1 & is.na(q3_5) & is.na(q3_6) & is.na(q3_7) ~ 3, 
+#      is.na(q3_1) & is.na(q3_2) & is.na(q3_3) & q3_5 == 1 & is.na(q3_6) & is.na(q3_7) ~ 4, 
+#      is.na(q3_1) & is.na(q3_2) & is.na(q3_3) & is.na(q3_5) & q3_6 == 1 & is.na(q3_7) ~ 5, 
+#      is.na(q3_1) & is.na(q3_2) & is.na(q3_3) & is.na(q3_5) & is.na(q3_6) & q3_7 == 1 ~ 6, 
+#      is.na(q3_1) & is.na(q3_2) & is.na(q3_3) & is.na(q3_5) & is.na(q3_6) & is.na(q3_7) ~ NA_real_,
+#      TRUE ~ 7
+#      )
+
+temp <- tibble(variable = rep(c("race"), each = 8),
+               question = rep(c("Q3. Respondent's race"), each = 8), 
+               response = rep(c(NA, 1, 2, 3, 4, 5, 6, 7), times = 1)) |>
+  left_join(
+    data |>
+      select(race) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 1 ~ "[1] American Indian or Alaskan Native",
+      response == 2 ~ "[2] Asian",
+      response == 3 ~ "[3] Black or African American",
+      response == 4 ~ "[4] Native Hawaiian or Other Pacific Islander",
+      response == 5 ~ "[5] White",
+      response == 6 ~ "[6] Other",
+      response == 7 ~ "[7] 2+ racial categories selected",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: ethnicity prep
+# ethnicity = case_when(
+#       q3_4 == 1 ~ 1, 
+#       TRUE ~ 0
+#       )
+
+temp <- tibble(variable = rep(c("ethnicity"), each = 3),
+               question = rep(c("Q3. Respondent's ethnicity"), each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(ethnicity) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] Not Hispanic or Latino",
+      response == 1 ~ "[1] Hispanic or Latino",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+
+```{r}
+#| label: education prep
+# education = q4
+
+temp <- tibble(variable = rep(c("education"), each = 8),
+               question = rep(c("Q4. What is the highest degree or level of school you have COMPLETED?"), each = 8), 
+               response = rep(c(NA, 1, 2, 3, 4, 5, 6, 7), times = 1)) |>
+  left_join(
+    data |>
+      select("education") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 1 ~ "[1] High school diploma or equivalent (such as GED)",
+      response == 2 ~ "[2] Some college credit, but not degree",
+      response == 3 ~ "[3] Associate's degree (for example: AA, AS)",
+      response == 4 ~ "[4] Bachelor's degree (for example: BA, BS)",
+      response == 5 ~ "[5] Master's degree (for example: MA, MS, MEng, MSW, MBA)",
+      response == 6 ~ "[6] Professional degree beyond a Bachelor's Degree (for example: MD, JD)",
+      response == 7 ~ "[7] Doctorate degree (for example: PhD, EdD)",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: degree_1 prep
+# degree_1 = case_when(
+#       q5_1 == 2 ~ 0, 
+#       TRUE ~ q5_1
+#       )
+
+temp <- tibble(variable = rep(c("degree_1"), each = 3),
+               question = rep(c("Q5. Did any of your degrees include curriculum or course content related to the following subject areas?: Aging or Older Adults"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(degree_1) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: degree_2 prep
+#     degree_2 = case_when(
+#      q5_2 == 2 ~ 0, 
+#      TRUE ~ q5_2
+#      )
+
+temp <- tibble(variable = rep(c("degree_2"), each = 3),
+               question = rep(c("Q5. Did any of your degrees include curriculum or course content related to the following subject areas?: Disabilities"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(degree_2) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: degree_3 prep
+#     degree_3 = case_when(
+#      q5_3 == 2 ~ 0, 
+#      TRUE ~ q5_3
+#      )
+
+temp <- tibble(variable = rep(c("degree_3"), each = 3),
+               question = rep(c("Q5. Did any of your degrees include curriculum or course content related to the following subject areas?: Behavioral or mental health"), each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(degree_3) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: degree_4 prep
+#    degree_4 = case_when(
+#      q5_4 == 2 ~ 0, 
+#      TRUE ~ q5_4
+#      )
+
+temp <- tibble(variable = rep(c("degree_4"), each = 3),
+               question = rep(c("Q5. Did any of your degrees include curriculum or course content related to the following subject areas?: Long-term services and supports"), each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(degree_4) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: degree_5 prep
+#     degree_5 = case_when(
+#      q5_5 == 2 ~ 0, 
+#      TRUE ~ q5_5
+#      )
+
+temp <- tibble(variable = rep(c("degree_5"), each = 3),
+               question = rep(c("Q5. Did any of your degrees include curriculum or course content related to the following subject areas?: Healthcare administration"), each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(degree_5) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: cert_1 prep
+# cert_1 = q6_1
+
+temp <- tibble(variable = rep(c("cert_1"), each = 4),
+               question = rep(c("Q6. Do you currently have or have you ever had any of the following certifications or licenses: Nursing home administrator"), each = 4), 
+               response = rep(c(NA, 1, 2, 3), times = 1)) |>
+  left_join(
+    data |>
+      select(cert_1) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 1 ~ "[1] No, never",
+      response == 2 ~ "[2] Yes, previously",
+      response == 3 ~ "[3] Yes, currently",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: cert_2 prep
+# cert_2 = q6_2
+
+temp <- tibble(variable = rep(c("cert_2"), each = 4),
+               question = rep(c("Q6. Do you currently have or have you ever had any of the following certifications or licenses: Registered nurse (RN)"), 
+                              each = 4), 
+               response = rep(c(NA, 1, 2, 3), times = 1)) |>
+  left_join(
+    data |>
+      select(cert_2) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 1 ~ "[1] No, never",
+      response == 2 ~ "[2] Yes, previously",
+      response == 3 ~ "[3] Yes, currently",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: cert_3 prep
+# cert_3 = q6_3
+
+temp <- tibble(variable = rep(c("cert_3"), each = 4),
+               question = rep(c("Q6. Do you currently have or have you ever had any of the following certifications or licenses: Licensed practical/vocational nurse (LPN/LVN)"), 
+                              each = 4), 
+               response = rep(c(NA, 1, 2, 3), times = 1)) |>
+  left_join(
+    data |>
+      select(cert_3) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 1 ~ "[1] No, never",
+      response == 2 ~ "[2] Yes, previously",
+      response == 3 ~ "[3] Yes, currently",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: cert_4 prep
+# cert_4 = q6_4
+
+temp <- tibble(variable = rep(c("cert_4"), each = 4),
+               question = rep(c("Q6. Do you currently have or have you ever had any of the following certifications or licenses: Certified nursing assistant (CNA)"), 
+                              each = 4), 
+               response = rep(c(NA, 1, 2, 3), times = 1)) |>
+  left_join(
+    data |>
+      select(cert_4) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 1 ~ "[1] No, never",
+      response == 2 ~ "[2] Yes, previously",
+      response == 3 ~ "[3] Yes, currently",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: cert_5 prep
+# cert_5 = q6_5
+
+temp <- tibble(variable = rep(c("cert_5"), each = 4),
+               question = rep(c("Q6. Do you currently have or have you ever had any of the following certifications or licenses: Certified medication aide (CMA)"), 
+                              each = 4), 
+               response = rep(c(NA, 1, 2, 3), times = 1)) |>
+  left_join(
+    data |>
+      select(cert_5) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 1 ~ "[1] No, never",
+      response == 2 ~ "[2] Yes, previously",
+      response == 3 ~ "[3] Yes, currently",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: cert_6 prep
+# cert_6 = q6_6
+
+temp <- tibble(variable = rep(c("cert_6"), each = 4),
+               question = rep(c("Q6. Do you currently have or have you ever had any of the following certifications or licenses: Other certification"), 
+                              each = 4), 
+               response = rep(c(NA, 1, 2, 3), times = 1)) |>
+  left_join(
+    data |>
+      select(cert_6) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 1 ~ "[1] No, never",
+      response == 2 ~ "[2] Yes, previously",
+      response == 3 ~ "[3] Yes, currently",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: lca_year prep
+#    lca_year = case_when(
+#      q7 == 1 ~ 4, 
+#      q7 == 2 ~ 3, 
+#      q7 == 3 ~ 2, 
+#      q7 == 4 ~ 1, 
+#      TRUE ~ NA_real_
+#      )
+
+temp <- tibble(variable = rep(c("lca_year"), each = 5),
+               question = rep(c("Q7. In what year did you last attend the state-approved 40-hour training offered by Leading Age Oregon or Oregon Health Care Association (OHCA)?"), each = 5), 
+               response = rep(c(NA, 1, 2, 3, 4), times = 1)) |>
+  left_join(
+    data |>
+      select("lca_year") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 1 ~ "[1] 2017 or before",
+      response == 2 ~ "[2] 2018",
+      response == 3 ~ "[3] 2019",
+      response == 4 ~ "[4] 2020",
+      TRUE ~ ""
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: trainsat_1 prep
+#    trainsat_1 = q8_1
+
+temp <- tibble(variable = rep(c("trainsat_1"), each = 6),
+               question = rep(c("Q8. How satisfied were you about the different subjects covered in the training program that you attended: Rules and regulations (e.g., health, fire)"), each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(trainsat_1) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Very dissatisfied",
+          response == 2 ~ "[2] Dissatisfied",
+          response == 3 ~ "[3] Neither satisfied nor dissatisfied",
+          response == 4 ~ "[4] Satisfied",
+          response == 5 ~ "[5] Very satisfied",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: trainsat_2 prep
+#    trainsat_2 = q8_2
+
+temp <- tibble(variable = rep(c("trainsat_2"), each = 6),
+               question = rep(c("Q8. How satisfied were you about the different subjects covered in the training program that you attended: Finance, accounting"), each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(trainsat_2) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Very dissatisfied",
+          response == 2 ~ "[2] Dissatisfied",
+          response == 3 ~ "[3] Neither satisfied nor dissatisfied",
+          response == 4 ~ "[4] Satisfied",
+          response == 5 ~ "[5] Very satisfied",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: trainsat_3 prep
+#    trainsat_3 = q8_3
+
+temp <- tibble(variable = rep(c("trainsat_3"), each = 6),
+               question = rep(c("Q8. How satisfied were you about the different subjects covered in the training program that you attended: Human resources and staffing"), each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(trainsat_3) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Very dissatisfied",
+          response == 2 ~ "[2] Dissatisfied",
+          response == 3 ~ "[3] Neither satisfied nor dissatisfied",
+          response == 4 ~ "[4] Satisfied",
+          response == 5 ~ "[5] Very satisfied",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: trainsat_4 prep
+#    trainsat_4 = q8_4
+
+temp <- tibble(variable = rep(c("trainsat_4"), each = 6),
+               question = rep(c("Q8. How satisfied were you about the different subjects covered in the training program that you attended: Physical environment (e.g., building/plant management)"), each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(trainsat_4) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Very dissatisfied",
+          response == 2 ~ "[2] Dissatisfied",
+          response == 3 ~ "[3] Neither satisfied nor dissatisfied",
+          response == 4 ~ "[4] Satisfied",
+          response == 5 ~ "[5] Very satisfied",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: trainsat_5 prep
+#    trainsat_5 = q8_5
+
+temp <- tibble(variable = rep(c("trainsat_5"), each = 6),
+               question = rep(c("Q8. How satisfied were you about the different subjects covered in the training program that you attended: Leadership skills"), each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(trainsat_5) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Very dissatisfied",
+          response == 2 ~ "[2] Dissatisfied",
+          response == 3 ~ "[3] Neither satisfied nor dissatisfied",
+          response == 4 ~ "[4] Satisfied",
+          response == 5 ~ "[5] Very satisfied",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: trainagree_1 prep
+#    trainagree_1 = q9_1
+
+temp <- tibble(variable = rep(c("trainagree_1"), each = 6),
+               question = rep(c("Q9. Do you agree or disagree with the following statements?: My training sufficiently prepared me for this position."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(trainagree_1) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: trainagree_2 prep
+#    trainagree_2 = q9_2
+
+temp <- tibble(variable = rep(c("trainagree_2"), each = 6),
+               question = rep(c("Q9. Do you agree or disagree with the following statements?: I received sufficient onboarding support (e.g., mentorship) when I started this position."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(trainagree_2) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: trainagree_3 prep
+#    trainagree_3 = q9_3
+
+temp <- tibble(variable = rep(c("trainagree_3"), each = 6),
+               question = rep(c("Q9. Do you agree or disagree with the following statements?: There are sufficient ongoing training opportunities for me."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(trainagree_3) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: trainagree_4 prep
+#    trainagree_4 = q9_4
+
+temp <- tibble(variable = rep(c("trainagree_4"), each = 6),
+               question = rep(c("Q9. Do you agree or disagree with the following statements?: The existing opportunities for continuing education are relevant to my work."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(trainagree_4) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: trainagree_5 prep
+#    trainagree_5 = q9_5
+
+temp <- tibble(variable = rep(c("trainagree_5"), each = 6),
+               question = rep(c("Q9. Do you agree or disagree with the following statements?: My employer makes it possible for me to attend training (e.g., paid time for training)."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(trainagree_5) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: famown prep
+#    famown = case_when(
+#      q10a == 2 ~ 0, 
+#      q10a == 1 ~ 1, 
+#      TRUE ~ NA_real_
+#      )
+
+temp <- tibble(variable = rep(c("famown"), each = 3),
+               question = rep(c("Q10a. Do you or a member of your immediate family have partial or full ownership of this community?"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select("famown") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: adten prep
+#    adten = case_when(
+#      q11 == 20192020 ~ 1, 
+#      q11 == 2017 ~ 3, 
+#      TRUE ~ q11
+#      )
+
+temp <- tibble(variable = rep(c("adten"), each = 1),
+               question = rep(c("Q11. How long have you been an administrator at this community? Please enter in years."), each = 1)) |>
+  bind_cols(data |>
+              select(adten) |>
+              summarize(
+                n = n(),
+                mean = round(mean(as.numeric(adten), na.rm = T), 1),
+                sd = round(sd(as.numeric(adten), na.rm = T), 1)
+              )
+            ) |> 
+  transmute(
+    variable = variable,
+    question = question,
+    label = c(""),
+    freq = as.character(n),
+    mean = str_glue("{mean}"),
+    sd = str_glue("({sd})")
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: priorpos prep
+#    priorpos = case_when(
+#      q12 == 1 ~ 1, 
+#      q12 == 2 ~ 0, 
+#      TRUE ~ NA_real_
+#      )
+
+temp <- tibble(variable = rep(c("priorpos"), each = 3),
+               question = rep(c("Q12. Have you worked in any other position at this community prior to becoming an administrator?"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select("priorpos") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: prevadmin prep
+#    prevadmin = case_when(
+#      q13_1 == 1 & is.na(q13_2) ~ 1, ## Assisted Living
+#      q13_2 == 1 & is.na(q13_1) ~ 2, ## Memory Care
+#      q13_1 == 1 & q13_2 == 1 ~ 3, ## Assisted Living and Memory Care
+#      q13_3 == 1 ~ 4, ## No, first community
+#      TRUE ~ NA_real_
+#    )
+
+temp <- tibble(variable = rep(c("prevadmin"), each = 5),
+               question = rep(c("Q13. Have you ever been an administrator at another assisted living, residential care, or memory care
+community? Please select all that apply."), 
+                              each = 5), 
+               response = rep(c(NA, 1, 2, 3, 4), times = 1)) |>
+  left_join(
+    data |>
+      select("prevadmin") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 1 ~ "[1] Assisted living/residential care (not endorsed for memory care)", 
+      response == 2 ~ "[2] Memory care community",
+      response == 3 ~ "[3] Assisted living/residential care (not endorsed for memory care) & Memory care community", 
+      response == 4 ~ "[4] No, this is the first community of which I am the administrator.",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: reasonleave prep
+#    reasonleave = q14
+
+temp <- tibble(variable = rep(c("reasonleave"), each = 6),
+               question = rep(c("Q14. What was the reason for leaving your administrator position at that last community?"), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select("reasonleave") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 1 ~ "[1] I transferred to this community in the same organization", 
+      response == 2 ~ "[2] I quit",
+      response == 3 ~ "[3] I was laid off", 
+      response == 4 ~ "[4] It closed", 
+      response == 5 ~ "[5] Other",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: everwork_1 prep
+#    everwork_1 = case_when(
+#      q15_1 == 2 ~ 0, 
+#      TRUE ~ q15_1)
+
+temp <- tibble(variable = rep(c("everwork_1"), each = 3),
+               question = rep(c("Q15. Have you ever worked in any of the following settings prior to your current job?: Adult foster/care home"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select("everwork_1") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes", 
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: everwork_2 prep
+#    everwork_2 = case_when(
+#      q15_2 == 2 ~ 0, 
+#      TRUE ~ q15_2)
+
+temp <- tibble(variable = rep(c("everwork_2"), each = 3),
+               question = rep(c("Q15. Have you ever worked in any of the following settings prior to your current job?: Nursing home"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select("everwork_2") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes", 
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: everwork_3 prep
+#    everwork_3 = case_when(
+#      q15_3 == 2 ~ 0, 
+#      TRUE ~ q15_3)
+
+temp <- tibble(variable = rep(c("everwork_3"), each = 3),
+               question = rep(c("Q15. Have you ever worked in any of the following settings prior to your current job?: Home health agency (including hospice agency)"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select("everwork_3") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes", 
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: everwork_4 prep
+#    everwork_4 = case_when(
+#      q15_4 == 2 ~ 0, 
+#      TRUE ~ q15_4)
+
+temp <- tibble(variable = rep(c("everwork_4"), each = 3),
+               question = rep(c("Q15. Have you ever worked in any of the following settings prior to your current job?: Home care"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select("everwork_4") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes", 
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: everwork_5 prep
+#    everwork_5 = case_when(
+#      q15_5 == 2 ~ 0, 
+#      TRUE ~ q15_5)
+
+temp <- tibble(variable = rep(c("everwork_5"), each = 3),
+               question = rep(c("Q15. Have you ever worked in any of the following settings prior to your current job?: Hospital"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select("everwork_5") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes", 
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: everwork_6 prep
+#    everwork_6 = case_when(
+#      q15_6 == 2 ~ 0, 
+#      TRUE ~ q15_6)
+
+temp <- tibble(variable = rep(c("everwork_6"), each = 3),
+               question = rep(c("Q15. Have you ever worked in any of the following settings prior to your current job?: Adult day care"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select("everwork_6") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes", 
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: everwork_7 prep
+#    everwork_7 = case_when(
+#      q15_7 == 2 ~ 0, 
+#      TRUE ~ q15_7)
+
+temp <- tibble(variable = rep(c("everwork_7"), each = 3),
+               question = rep(c("Q15. Have you ever worked in any of the following settings prior to your current job?: Other"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select("everwork_7") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes", 
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: howlong prep
+#    howlong = q16
+
+temp <- tibble(variable = rep(c("howlong"), each = 1),
+               question = rep(c("Q16. Considering your past work experience, how long have you worked in the long-term care or health settings listed above in total? Please include all prior jobs, even if you left and then came back. Please enter in years."), each = 1)) |>
+  bind_cols(data |>
+              select(howlong) |>
+              summarize(
+                n = n(),
+                mean = round(mean(as.numeric(howlong), na.rm = T), 1),
+                sd = round(sd(as.numeric(howlong), na.rm = T), 1)
+              )
+            ) |> 
+  transmute(
+    variable = variable,
+    question = question,
+    label = c(""),
+    freq = as.character(n),
+    mean = str_glue("{mean}"),
+    sd = str_glue("({sd})")
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: salary prep
+#    salary = q17
+
+temp <- tibble(variable = rep(c("salary"), each = 8),
+               question = rep(c("Q17. What is your current annual salary in your position as an administrator?"), 
+                              each = 8), 
+               response = rep(c(NA, 1, 2, 3, 4, 5, 6, 7), times = 1)) |>
+  left_join(
+    data |>
+      select("salary") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 1 ~ "[1] Less than or equal to $24,999", 
+      response == 2 ~ "[2] $25,000 to $49,999",
+      response == 3 ~ "[3] $50,000 to $74,999", 
+      response == 4 ~ "[4] $75,000 to $99,999", 
+      response == 5 ~ "[5] $100,000 or greater", 
+      response == 6 ~ "[6] Prefer not to answer", 
+      response == 7 ~ "[7] Other", 
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: benefits_1 prep
+#     benefits_1 = case_when(
+#      q18_1 == 2 ~ 0, 
+#      q18_1 == 3 ~ NA_real_, 
+#      TRUE ~ q18_1)
+
+temp <- tibble(variable = rep(c("benefits_1"), each = 3),
+               question = rep(c("Q18. Which of the following fringe benefits does your current employer offer to you?: Health insurance for you"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select("benefits_1") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes", 
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: benefits_2 prep
+#     benefits_2 = case_when(
+#      q18_2 == 2 ~ 0, 
+#      q18_2 == 3 ~ NA_real_, 
+#      TRUE ~ q18_2)
+
+temp <- tibble(variable = rep(c("benefits_2"), each = 3),
+               question = rep(c("Q18. Which of the following fringe benefits does your current employer offer to you?: Health insurance that includes family coverage"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select("benefits_2") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes", 
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: benefits_3 prep
+#     benefits_3 = case_when(
+#      q18_3 == 2 ~ 0, 
+#      q18_3 == 3 ~ NA_real_, 
+#      TRUE ~ q18_3)
+
+temp <- tibble(variable = rep(c("benefits_3"), each = 3),
+               question = rep(c("Q18. Which of the following fringe benefits does your current employer offer to you?: Paid personal time off or vacation time"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select("benefits_3") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes", 
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: benefits_4 prep
+#     benefits_4 = case_when(
+#      q18_4 == 2 ~ 0, 
+#      q18_4 == 3 ~ NA_real_, 
+#      TRUE ~ q18_4)
+
+temp <- tibble(variable = rep(c("benefits_4"), each = 3),
+               question = rep(c("Q18. Which of the following fringe benefits does your current employer offer to you?: Paid sick leave"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select("benefits_4") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes", 
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: benefits_5 prep
+#     benefits_5 = case_when(
+#      q18_5 == 2 ~ 0, 
+#      q18_5 == 3 ~ NA_real_, 
+#      TRUE ~ q18_5)
+
+temp <- tibble(variable = rep(c("benefits_5"), each = 3),
+               question = rep(c("Q18. Which of the following fringe benefits does your current employer offer to you?: Paid holidays"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select("benefits_5") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes", 
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: benefits_6 prep
+#     benefits_6 = case_when(
+#      q18_6 == 2 ~ 0, 
+#      q18_6 == 3 ~ NA_real_, 
+#      TRUE ~ q18_6)
+
+temp <- tibble(variable = rep(c("benefits_6"), each = 3),
+               question = rep(c("Q18. Which of the following fringe benefits does your current employer offer to you?: Pension"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select("benefits_6") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes", 
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: benefits_7 prep
+#     benefits_7 = case_when(
+#      q18_7 == 2 ~ 0, 
+#      q18_7 == 3 ~ NA_real_, 
+#      TRUE ~ q18_7)
+
+temp <- tibble(variable = rep(c("benefits_7"), each = 3),
+               question = rep(c("Q18. Which of the following fringe benefits does your current employer offer to you?: A 401(k) or 403(b) account"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select("benefits_7") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes", 
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: benefits_8 prep
+#     benefits_8 = case_when(
+#      q18_8 == 2 ~ 0, 
+#      q18_8 == 3 ~ NA_real_, 
+#      TRUE ~ q18_8)
+
+temp <- tibble(variable = rep(c("benefits_8"), each = 3),
+               question = rep(c("Q18. Which of the following fringe benefits does your current employer offer to you?: Life insurance"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select("benefits_8") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes", 
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: benefits_9 prep
+#     benefits_9 = case_when(
+#      q18_9 == 2 ~ 0, 
+#      q18_9 == 3 ~ NA_real_, 
+#      TRUE ~ q18_9)
+
+temp <- tibble(variable = rep(c("benefits_9"), each = 3),
+               question = rep(c("Q18. Which of the following fringe benefits does your current employer offer to you?: Bonus or incentive pay for (e.g., census/occupancy, incident reports)."), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select("benefits_9") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] No", 
+      response == 1 ~ "[1] Yes", 
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobsat_1 prep
+#    jobsat_1 = case_when(
+#      q19_1 == 6 ~ 0, 
+#      TRUE ~ q19_1)
+
+temp <- tibble(variable = rep(c("jobsat_1"), each = 7),
+               question = rep(c("Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of job security I have."), 
+                              each = 7), 
+               response = rep(c(NA, 0, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select("jobsat_1") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] Not applicable",
+      response == 1 ~ "[1] Very dissatisfied", 
+      response == 2 ~ "[2] Dissatisfied",
+      response == 3 ~ "[3] Neither satisfied nor dissatisfied", 
+      response == 4 ~ "[4] Satisfied", 
+      response == 5 ~ "[5] Very satisfied",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobsat_2 prep
+#    jobsat_2 = case_when(
+#      q19_2 == 6 ~ 0, 
+#      TRUE ~ q19_2)
+
+temp <- tibble(variable = rep(c("jobsat_2"), each = 7),
+               question = rep(c("Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of pay and fringe benefits
+I receive."), 
+                              each = 7), 
+               response = rep(c(NA, 0, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select("jobsat_2") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] Not applicable",
+      response == 1 ~ "[1] Very dissatisfied", 
+      response == 2 ~ "[2] Dissatisfied",
+      response == 3 ~ "[3] Neither satisfied nor dissatisfied", 
+      response == 4 ~ "[4] Satisfied", 
+      response == 5 ~ "[5] Very satisfied",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobsat_3 prep
+#    jobsat_3 = case_when(
+#      q19_3 == 6 ~ 0, 
+#      TRUE ~ q19_3)
+
+temp <- tibble(variable = rep(c("jobsat_3"), each = 7),
+               question = rep(c("Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of personal growth and
+development I get in doing my job."), 
+                              each = 7), 
+               response = rep(c(NA, 0, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select("jobsat_3") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] Not applicable",
+      response == 1 ~ "[1] Very dissatisfied", 
+      response == 2 ~ "[2] Dissatisfied",
+      response == 3 ~ "[3] Neither satisfied nor dissatisfied", 
+      response == 4 ~ "[4] Satisfied", 
+      response == 5 ~ "[5] Very satisfied",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobsat_4 prep
+#    jobsat_4 = case_when(
+#      q19_4 == 6 ~ 0, 
+#      TRUE ~ q19_4)
+
+temp <- tibble(variable = rep(c("jobsat_4"), each = 7),
+               question = rep(c("Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The people I talk to and work with on
+my job."), 
+                              each = 7), 
+               response = rep(c(NA, 0, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select("jobsat_4") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] Not applicable",
+      response == 1 ~ "[1] Very dissatisfied", 
+      response == 2 ~ "[2] Dissatisfied",
+      response == 3 ~ "[3] Neither satisfied nor dissatisfied", 
+      response == 4 ~ "[4] Satisfied", 
+      response == 5 ~ "[5] Very satisfied",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobsat_5 prep
+#    jobsat_5 = case_when(
+#      q19_5 == 6 ~ 0, 
+#      TRUE ~ q19_5)
+
+temp <- tibble(variable = rep(c("jobsat_5"), each = 7),
+               question = rep(c("Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The degree of respect and fair
+treatment I receive from my boss."), 
+                              each = 7), 
+               response = rep(c(NA, 0, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select("jobsat_5") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] Not applicable",
+      response == 1 ~ "[1] Very dissatisfied", 
+      response == 2 ~ "[2] Dissatisfied",
+      response == 3 ~ "[3] Neither satisfied nor dissatisfied", 
+      response == 4 ~ "[4] Satisfied", 
+      response == 5 ~ "[5] Very satisfied",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobsat_6 prep
+#    jobsat_6 = case_when(
+#      q19_6 == 6 ~ 0, 
+#      TRUE ~ q19_6)
+
+temp <- tibble(variable = rep(c("jobsat_6"), each = 7),
+               question = rep(c("Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The feeling of worthwhile
+accomplishment I get from doing my job."), 
+                              each = 7), 
+               response = rep(c(NA, 0, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select("jobsat_6") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] Not applicable",
+      response == 1 ~ "[1] Very dissatisfied", 
+      response == 2 ~ "[2] Dissatisfied",
+      response == 3 ~ "[3] Neither satisfied nor dissatisfied", 
+      response == 4 ~ "[4] Satisfied", 
+      response == 5 ~ "[5] Very satisfied",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobsat_7 prep
+#    jobsat_7 = case_when(
+#      q19_7 == 6 ~ 0, 
+#      TRUE ~ q19_7)
+
+temp <- tibble(variable = rep(c("jobsat_7"), each = 7),
+               question = rep(c("Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The chance to get to know other
+people while on the job."), 
+                              each = 7), 
+               response = rep(c(NA, 0, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select("jobsat_7") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] Not applicable",
+      response == 1 ~ "[1] Very dissatisfied", 
+      response == 2 ~ "[2] Dissatisfied",
+      response == 3 ~ "[3] Neither satisfied nor dissatisfied", 
+      response == 4 ~ "[4] Satisfied", 
+      response == 5 ~ "[5] Very satisfied",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobsat_8 prep
+#    jobsat_8 = case_when(
+#      q19_8 == 6 ~ 0, 
+#      TRUE ~ q19_8)
+
+temp <- tibble(variable = rep(c("jobsat_8"), each = 7),
+               question = rep(c("Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of support and guidance I
+receive from my supervisor."), 
+                              each = 7), 
+               response = rep(c(NA, 0, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select("jobsat_8") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] Not applicable",
+      response == 1 ~ "[1] Very dissatisfied", 
+      response == 2 ~ "[2] Dissatisfied",
+      response == 3 ~ "[3] Neither satisfied nor dissatisfied", 
+      response == 4 ~ "[4] Satisfied", 
+      response == 5 ~ "[5] Very satisfied",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobsat_9 prep
+#    jobsat_9 = case_when(
+#      q19_9 == 6 ~ 0, 
+#      TRUE ~ q19_9)
+
+temp <- tibble(variable = rep(c("jobsat_9"), each = 7),
+               question = rep(c("Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The degree to which I am fairly paid for what I contribute to this organization."), 
+                              each = 7), 
+               response = rep(c(NA, 0, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select("jobsat_9") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] Not applicable",
+      response == 1 ~ "[1] Very dissatisfied", 
+      response == 2 ~ "[2] Dissatisfied",
+      response == 3 ~ "[3] Neither satisfied nor dissatisfied", 
+      response == 4 ~ "[4] Satisfied", 
+      response == 5 ~ "[5] Very satisfied",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobsat_10 prep
+#    jobsat_10 = case_when(
+#      q19_10 == 6 ~ 0, 
+#      TRUE ~ q19_10)
+
+temp <- tibble(variable = rep(c("jobsat_10"), each = 7),
+               question = rep(c("Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of independent thought
+and action I can exercise in my job."), 
+                              each = 7), 
+               response = rep(c(NA, 0, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select("jobsat_10") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] Not applicable",
+      response == 1 ~ "[1] Very dissatisfied", 
+      response == 2 ~ "[2] Dissatisfied",
+      response == 3 ~ "[3] Neither satisfied nor dissatisfied", 
+      response == 4 ~ "[4] Satisfied", 
+      response == 5 ~ "[5] Very satisfied",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobsat_11 prep
+#    jobsat_11 = case_when(
+#      q19_11 == 6 ~ 0, 
+#      TRUE ~ q19_11)
+
+temp <- tibble(variable = rep(c("jobsat_11"), each = 7),
+               question = rep(c("Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: How secure things look for me in the
+future in this organization."), 
+                              each = 7), 
+               response = rep(c(NA, 0, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select("jobsat_11") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] Not applicable",
+      response == 1 ~ "[1] Very dissatisfied", 
+      response == 2 ~ "[2] Dissatisfied",
+      response == 3 ~ "[3] Neither satisfied nor dissatisfied", 
+      response == 4 ~ "[4] Satisfied", 
+      response == 5 ~ "[5] Very satisfied",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobsat_12 prep
+#    jobsat_12 = case_when(
+#      q19_12 == 6 ~ 0, 
+#      TRUE ~ q19_12)
+
+temp <- tibble(variable = rep(c("jobsat_12"), each = 7),
+               question = rep(c("Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The chance to help other people while
+at work."), 
+                              each = 7), 
+               response = rep(c(NA, 0, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select("jobsat_12") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] Not applicable",
+      response == 1 ~ "[1] Very dissatisfied", 
+      response == 2 ~ "[2] Dissatisfied",
+      response == 3 ~ "[3] Neither satisfied nor dissatisfied", 
+      response == 4 ~ "[4] Satisfied", 
+      response == 5 ~ "[5] Very satisfied",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobsat_13 prep
+#    jobsat_13 = case_when(
+#      q19_13 == 6 ~ 0, 
+#      TRUE ~ q19_13)
+
+temp <- tibble(variable = rep(c("jobsat_13"), each = 7),
+               question = rep(c("Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The amount of challenges in my job."), 
+                              each = 7), 
+               response = rep(c(NA, 0, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select("jobsat_13") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] Not applicable",
+      response == 1 ~ "[1] Very dissatisfied", 
+      response == 2 ~ "[2] Dissatisfied",
+      response == 3 ~ "[3] Neither satisfied nor dissatisfied", 
+      response == 4 ~ "[4] Satisfied", 
+      response == 5 ~ "[5] Very satisfied",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobsat_14 prep
+#    jobsat_14 = case_when(
+#      q19_14 == 6 ~ 0, 
+#      TRUE ~ q19_14)
+
+temp <- tibble(variable = rep(c("jobsat_14"), each = 7),
+               question = rep(c("Q19. To what extent are you satisfied or dissatisfied with each aspect of your job?: The overall quality of the supervision I receive in my work."), 
+                              each = 7), 
+               response = rep(c(NA, 0, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select("jobsat_14") |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable,
+    question = question,
+    label = case_when(
+      is.na(response) ~ "[-99, NA] Missing",
+      response == 0 ~ "[0] Not applicable",
+      response == 1 ~ "[1] Very dissatisfied", 
+      response == 2 ~ "[2] Dissatisfied",
+      response == 3 ~ "[3] Neither satisfied nor dissatisfied", 
+      response == 4 ~ "[4] Satisfied", 
+      response == 5 ~ "[5] Very satisfied",
+      TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobagree_1 prep
+#    jobagree_1 = q20_1
+
+temp <- tibble(variable = rep(c("jobagree_1"), each = 6),
+               question = rep(c("Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I feel a strong sense of 'belonging' to my organization."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobagree_1) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobagree_2 prep
+#    jobagree_2 = q20_2
+
+temp <- tibble(variable = rep(c("jobagree_2"), each = 6),
+               question = rep(c("Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: My organization really cares about my wellbeing."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobagree_2) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobagree_3 prep
+#    jobagree_3 = q20_3
+
+temp <- tibble(variable = rep(c("jobagree_3"), each = 6),
+               question = rep(c("Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I feel like 'part of the family' at this organization."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobagree_3) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobagree_4 prep
+#    jobagree_4 = q20_4
+
+temp <- tibble(variable = rep(c("jobagree_4"), each = 6),
+               question = rep(c("Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: Help is available from my organization when I have a problem."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobagree_4) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobagree_5 prep
+#    jobagree_5 = q20_5
+
+temp <- tibble(variable = rep(c("jobagree_5"), each = 6),
+               question = rep(c("Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: My job at this organization is secure."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobagree_5) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobagree_6 prep
+#    jobagree_6 = q20_6
+
+temp <- tibble(variable = rep(c("jobagree_6"), each = 6),
+               question = rep(c("Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I feel 'emotionally attached' to this organization."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobagree_6) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobagree_7 prep
+#    jobagree_7 = q20_7
+
+temp <- tibble(variable = rep(c("jobagree_7"), each = 6),
+               question = rep(c("Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I would feel guilty if I left this organization right now."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobagree_7) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobagree_8 prep
+#    jobagree_8 = q20_8
+
+temp <- tibble(variable = rep(c("jobagree_8"), each = 6),
+               question = rep(c("Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: My organization strongly considers my goals and values."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobagree_8) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobagree_9 prep
+#    jobagree_9 = q20_9
+
+temp <- tibble(variable = rep(c("jobagree_9"), each = 6),
+               question = rep(c("Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I owe a great deal to this organization."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobagree_9) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobagree_10 prep
+#    jobagree_10 = q20_10
+
+temp <- tibble(variable = rep(c("jobagree_10"), each = 6),
+               question = rep(c("Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I am confident that I will be able to work for this organization as long as I wish."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobagree_10) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobagree_11 prep
+#    jobagree_11 = q20_11
+
+temp <- tibble(variable = rep(c("jobagree_11"), each = 6),
+               question = rep(c("Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I frequently think of quitting my current job."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobagree_11) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobagree_12 prep
+#    jobagree_12 = q20_12
+
+temp <- tibble(variable = rep(c("jobagree_12"), each = 6),
+               question = rep(c("Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: It would be very hard for me to leave my job right now even if I wanted to."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobagree_12) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobagree_13 prep
+#    jobagree_13 = q20_13
+
+temp <- tibble(variable = rep(c("jobagree_13"), each = 6),
+               question = rep(c("Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: Right now, staying with my job at this organization is a matter of necessity as much as desire."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobagree_13) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobagree_14 prep
+#    jobagree_14 = q20_14
+
+temp <- tibble(variable = rep(c("jobagree_14"), each = 6),
+               question = rep(c("Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: I will probably look for another job in the next year."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobagree_14) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobagree_15 prep
+#    jobagree_15 = q20_15
+
+temp <- tibble(variable = rep(c("jobagree_15"), each = 6),
+               question = rep(c("Q20. Thinking about the community, management, and ownership where you work, to what extent do you agree or disagree with the following statements?: There is a good chance that I will leave this job in the next year or so."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobagree_15) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_1 prep
+#    jobtrain_1 = case_when(
+#      is.na(q22_1) ~ 0, 
+#      TRUE ~ q22_1), 
+
+temp <- tibble(variable = rep(c("jobtrain_1"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Work-life balance"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_1) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_2 prep
+#    jobtrain_2 = case_when(
+#      is.na(q22_2) ~ 0, 
+#      TRUE ~ q22_2), 
+
+temp <- tibble(variable = rep(c("jobtrain_2"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Conducting effective meetings"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_2) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_3 prep
+#    jobtrain_3 = case_when(
+#      is.na(q22_3) ~ 0, 
+#      TRUE ~ q22_3), 
+
+temp <- tibble(variable = rep(c("jobtrain_3"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Being an effective leader"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_3) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_4 prep
+#    jobtrain_4 = case_when(
+#      is.na(q22_4) ~ 0, 
+#      TRUE ~ q22_4), 
+
+temp <- tibble(variable = rep(c("jobtrain_4"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Leading the change process"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_4) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_5 prep
+#    jobtrain_5 = case_when(
+#      is.na(q22_5) ~ 0, 
+#      TRUE ~ q22_5), 
+
+temp <- tibble(variable = rep(c("jobtrain_5"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Analyzing and interpreting data"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_5) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_6 prep
+#    jobtrain_6 = case_when(
+#      is.na(q22_6) ~ 0, 
+#      TRUE ~ q22_6), 
+
+temp <- tibble(variable = rep(c("jobtrain_6"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Informed decision making"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_6) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_7 prep
+#    jobtrain_7 = case_when(
+#      is.na(q22_7) ~ 0, 
+#      TRUE ~ q22_7), 
+
+temp <- tibble(variable = rep(c("jobtrain_7"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Creating and communicating a vision"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_7) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_8 prep
+#    jobtrain_8 = case_when(
+#      is.na(q22_8) ~ 0, 
+#      TRUE ~ q22_8), 
+
+temp <- tibble(variable = rep(c("jobtrain_8"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Developing and implementing a strategic plan"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_8) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_9 prep
+#    jobtrain_9 = case_when(
+#      is.na(q22_9) ~ 0, 
+#      TRUE ~ q22_9), 
+
+temp <- tibble(variable = rep(c("jobtrain_9"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Delegating tasks to others"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_9) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_10 prep
+#    jobtrain_10 = case_when(
+#      is.na(q22_10) ~ 0, 
+#      TRUE ~ q22_10), 
+
+temp <- tibble(variable = rep(c("jobtrain_10"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Inspiring and motivating staff"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_10) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_11 prep
+#    jobtrain_11 = case_when(
+#      is.na(q22_11) ~ 0, 
+#      TRUE ~ q22_11), 
+
+temp <- tibble(variable = rep(c("jobtrain_11"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Prioritizing"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_11) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_12 prep
+#    jobtrain_12 = case_when(
+#      is.na(q22_12) ~ 0, 
+#      TRUE ~ q22_12), 
+
+temp <- tibble(variable = rep(c("jobtrain_12"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Problem solving"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_12) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_13 prep
+#    jobtrain_13 = case_when(
+#      is.na(q22_13) ~ 0, 
+#      TRUE ~ q22_13), 
+
+temp <- tibble(variable = rep(c("jobtrain_13"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Time management"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_13) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_14 prep
+#    jobtrain_14 = case_when(
+#      is.na(q22_14) ~ 0, 
+#      TRUE ~ q22_14), 
+
+temp <- tibble(variable = rep(c("jobtrain_14"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Conflict resolution and mediation"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_14) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_15 prep
+#    jobtrain_15 = case_when(
+#      is.na(q22_15) ~ 0, 
+#      TRUE ~ q22_15), 
+
+temp <- tibble(variable = rep(c("jobtrain_15"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Oral and written communications"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_15) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_16 prep
+#    jobtrain_16 = case_when(
+#      is.na(q22_16) ~ 0, 
+#      TRUE ~ q22_16), 
+
+temp <- tibble(variable = rep(c("jobtrain_16"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Cultivating effective relationships"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_16) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_17 prep
+#    jobtrain_17 = case_when(
+#      is.na(q22_17) ~ 0, 
+#      TRUE ~ q22_17), 
+
+temp <- tibble(variable = rep(c("jobtrain_17"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Person-centered care / culture change"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_17) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_18 prep
+#    jobtrain_18 = case_when(
+#      is.na(q22_18) ~ 0, 
+#      TRUE ~ q22_18), 
+
+temp <- tibble(variable = rep(c("jobtrain_18"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Team building"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_18) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_19 prep
+#    jobtrain_19 = case_when(
+#      is.na(q22_19) ~ 0, 
+#      TRUE ~ q22_19), 
+
+temp <- tibble(variable = rep(c("jobtrain_19"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Managing teams"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_19) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_20 prep
+#    jobtrain_20 = case_when(
+#      is.na(q22_20) ~ 0, 
+#      TRUE ~ q22_20), 
+
+temp <- tibble(variable = rep(c("jobtrain_20"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Consensus building"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_20) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_21 prep
+#    jobtrain_21 = case_when(
+#      is.na(q22_21) ~ 0, 
+#      TRUE ~ q22_21), 
+
+temp <- tibble(variable = rep(c("jobtrain_21"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Active listening"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_21) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_22 prep
+#    jobtrain_22 = case_when(
+#      is.na(q22_22) ~ 0, 
+#      TRUE ~ q22_22), 
+
+temp <- tibble(variable = rep(c("jobtrain_22"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Coaching, teaching, and mentoring"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_22) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobtrain_23 prep
+#    jobtrain_23 = case_when(
+#      is.na(q22_23) ~ 0, 
+#      TRUE ~ q22_23), 
+
+temp <- tibble(variable = rep(c("jobtrain_23"), each = 3),
+               question = rep(c("Q22. Which of the following job skills would you say you would like to get training for? Please select all that apply.: Other"), 
+                              each = 3), 
+               response = rep(c(NA, 0, 1), times = 1)) |>
+  left_join(
+    data |>
+      select(jobtrain_23) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 0 ~ "[0] Unchecked",
+          response == 1 ~ "[1] Checked",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: genhealth prep
+# genhealth = case_when(
+#      q23 == 5 ~ 1, 
+#      q23 == 4 ~ 2, 
+#      q23 == 3 ~ 3, 
+#      q23 == 2 ~ 4, 
+#      q23 == 1 ~ 5, 
+#      TRUE ~ NA_real_)
+
+temp <- tibble(variable = rep(c("genhealth"), each = 6),
+               question = rep(c("Q23. Would you say your health in general is excellent, very good, good, fair, or poor?"), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(genhealth) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Poor",
+          response == 2 ~ "[2] Fair", 
+          response == 3 ~ "[3] Good", 
+          response == 4 ~ "[4] Very good", 
+          response == 5 ~ "[5] Excellent",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: feelworry prep
+# feelworry = case_when(
+#      q24 == 5 ~ 1, 
+#      q24 == 4 ~ 2, 
+#      q24 == 3 ~ 3, 
+#      q24 == 2 ~ 4, 
+#      q24 == 1 ~ 5, 
+#      TRUE ~ NA_real_)
+
+temp <- tibble(variable = rep(c("feelworry"), each = 6),
+               question = rep(c("Q24. How often do you feel worried, nervous, or anxious?"), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(feelworry) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Never",
+          response == 2 ~ "[2] A few times a year", 
+          response == 3 ~ "[3] Monthly", 
+          response == 4 ~ "[4] Weekly", 
+          response == 5 ~ "[5] Daily",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: feeldepressed prep
+# feeldepressed = case_when(
+#      q24 == 5 ~ 1, 
+#      q24 == 4 ~ 2, 
+#      q24 == 3 ~ 3, 
+#      q24 == 2 ~ 4, 
+#      q24 == 1 ~ 5, 
+#      TRUE ~ NA_real_)
+
+temp <- tibble(variable = rep(c("feeldepressed"), each = 6),
+               question = rep(c("Q25. How often do you feel depressed?"), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(feeldepressed) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Never",
+          response == 2 ~ "[2] A few times a year", 
+          response == 3 ~ "[3] Monthly", 
+          response == 4 ~ "[4] Weekly", 
+          response == 5 ~ "[5] Daily",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobbarr_1 prep
+# jobbarr_1 = q26_1
+
+temp <- tibble(variable = rep(c("jobbarr_1"), each = 6),
+               question = rep(c("Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: Working here makes it hard to spend enough time with my family."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobbarr_1) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobbarr_2 prep
+#    jobbarr_2 = q26_2
+
+temp <- tibble(variable = rep(c("jobbarr_2"), each = 6),
+               question = rep(c("Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: Working here leaves little time for other activities."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobbarr_2) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobbarr_3 prep
+#    jobbarr_3 = q26_3
+
+temp <- tibble(variable = rep(c("jobbarr_3"), each = 6),
+               question = rep(c("Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I have too much work and too little time to do it in."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobbarr_3) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobbarr_4 prep
+#    jobbarr_4 = q26_4
+
+temp <- tibble(variable = rep(c("jobbarr_4"), each = 6),
+               question = rep(c("Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I sometimes dread the telephone ringing at home because the call might be job-related."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobbarr_4) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobbarr_5 prep
+#    jobbarr_5 = q26_5
+
+temp <- tibble(variable = rep(c("jobbarr_5"), each = 6),
+               question = rep(c("Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I feel like I never had a day off."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobbarr_5) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobbarr_6 prep
+#    jobbarr_6 = q26_6
+
+temp <- tibble(variable = rep(c("jobbarr_6"), each = 6),
+               question = rep(c("Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: There are lots of times when my job drives me right up the wall."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobbarr_6) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobbarr_7 prep
+#    jobbarr_7 = q26_7
+
+temp <- tibble(variable = rep(c("jobbarr_7"), each = 6),
+               question = rep(c("Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: Sometimes when I think about my job I get a tight feeling in my chest."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobbarr_7) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobbarr_8 prep
+#    jobbarr_8 = q26_8
+
+temp <- tibble(variable = rep(c("jobbarr_8"), each = 6),
+               question = rep(c("Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I feel guilty when I take time off from my job."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobbarr_8) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobbarr_9 prep
+#    jobbarr_9 = q26_9
+
+temp <- tibble(variable = rep(c("jobbarr_9"), each = 6),
+               question = rep(c("Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: My job gets to me more than it should."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobbarr_9) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+```{r}
+#| label: jobbarr_10 prep
+#    jobbarr_10 = q26_10
+
+temp <- tibble(variable = rep(c("jobbarr_10"), each = 6),
+               question = rep(c("Q26. Following are some statements related to your work. Do you agree or disagree with each statement?: I have felt fidgety or nervous as a result of my job."), 
+                              each = 6), 
+               response = rep(c(NA, 1, 2, 3, 4, 5), times = 1)) |>
+  left_join(
+    data |>
+      select(jobbarr_10) |>
+      mutate(across(everything(), ~ replace(., .x == -99, NA))) |>
+      pivot_longer(
+        cols = everything(),
+        names_to = "variable",
+        values_to = "response"
+      ) |>
+      group_by(variable, response) |>
+      summarize(n = n()) |>
+      ungroup()
+  ) |>
+  mutate(n = tidyr::replace_na(n, 0)) |>
+  transmute(
+    variable = variable, 
+    question = question, 
+    label = case_when(
+          is.na(response) ~ "[-99, NA] Missing",
+          response == 1 ~ "[1] Strongly disagree",
+          response == 2 ~ "[2] Disagree",
+          response == 3 ~ "[3] Neither agree nor disagree",
+          response == 4 ~ "[4] Agree",
+          response == 5 ~ "[5] Strongly agree",
+          TRUE ~ NA_character_
+    ),
+    freq = as.character(n),
+    mean = NA_character_, 
+    sd = NA_character_
+  )
+
+data.table <- bind_rows(data.table, temp)
+```
+
+
+Assisted Living, Residential Care, Memory Care Administrator Survey Data Codebook 2021
+
+```{r}
+#| label: table
+
+data.table |>
+  rename(
+    Variable = variable,
+    Question = question,
+    Label = label,
+    `Unweighted Freq.` = freq,
+    Mean = mean,
+    SD = sd
+  ) |>
+  flextable() |>
+  autofit() |>
+  fit_to_width(10) |>
+  fontsize(size = 10,
+           part = "all") |>
+  merge_v(j = ~ Variable + Question) |>
+  valign(j = ~ Variable + Question, valign = "top") |>
+  theme_box()
+```
+
+
+```{r}
+write_csv(data.table, 
+          here("adturn_codebook.csv"))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

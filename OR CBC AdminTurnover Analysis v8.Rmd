@@ -1,0 +1,49 @@
+---
+title: "Untitled"
+author: "N.F. Parsons"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+
+if ("package:Statamarkdown" %in% search()) {
+  detach("package:Statamarkdown", unload = TRUE)
+}
+
+if (!require("pacman")) 
+  install.packages("pacman", repos = "https://cran.rstudio.org")
+
+if(!require("Statamarkdown")) {
+  p_load_gh("hemken/Statamarkdown")
+} else {
+  library(Statamarkdown)
+}
+
+p_load(
+  here, 
+  conflicted,
+  haven, 
+  knitr,
+  labelled, 
+  gtsummary,
+  tidyverse
+)
+
+here::i_am("_archive/here_anchor.R")
+setwd(here())
+
+statapath <- find_stata()
+knitr::opts_chunk$set(engine.path=list(stata=statapath), comment=NA)
+
+rm(list = ls())
+```
+
+
+## Descriptive Statistics 
+
+```{stata}
+sysuse auto
+summarize
+```

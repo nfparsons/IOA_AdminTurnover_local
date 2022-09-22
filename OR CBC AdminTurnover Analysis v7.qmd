@@ -1,0 +1,309 @@
+---
+title: "OR CBC Administrator Turnover Analysis"
+subtitle: "v7"
+format: html
+eval: true
+echo: false
+message: false
+warning: false
+---
+
+```{r}
+#| label: load R packages
+#| include: false
+
+if (!require("pacman")) 
+  install.packages("pacman", repos = "https://cran.rstudio.org")
+
+p_load(
+  here, 
+  conflicted,
+  haven, 
+  RStata, 
+  labelled, 
+  gtsummary,
+  DescTools,
+  corrplot, 
+  tidyverse
+)
+
+here::i_am("_archive/here_anchor.R")
+setwd(here())
+
+conflict_prefer_all("dplyr", quiet = TRUE)
+
+options(scipen = 9999)
+
+options("RStata.StataPath" = "/Applications/Stata/StataSE.app/Contents/MacOS/stata-se")
+options("RStata.StataVersion" = 17)
+
+set.seed(13)
+
+rm(list = ls())
+```
+
+::: {.panel-tabset}
+
+## Prep Data
+
+```{r}
+#| label: call .do file that preps data
+
+stata("adTurn_prep.do", data.out = TRUE)
+```
+
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+
+## Filter Data
+
+```{r}
+dat <- stata('use data/adTurn_clean
+             drop if (response==0)
+             drop if (exclude==1)
+             summarize
+             save data/adTurn_filtered, replace
+             ', data.out = TRUE)
+```
+
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+
+## Cronbach's $\alpha$ 
+
+### Job Satisfaction - Satisfaction with security
+```{r}
+stata(
+  'quietly: use "data/adTurn_raw_merge"
+  quietly: drop if (resp == 0)
+  quietly: drop if (NoAdminRecord != "Exclude")
+  alpha Q19_1 Q19_11
+  '
+)
+```
+
+### Job Satisfaction - Satisfaction with compensation
+
+```{r}
+stata(
+  'quietly: use "data/adTurn_raw_merge"
+  quietly: drop if (resp == 0)
+  quietly: drop if (NoAdminRecord != "Exclude")
+  alpha Q19_2 Q19_9
+  '
+)
+```
+
+### Job Satisfaction - Growth satisfaction
+
+```{r}
+stata(
+  'quietly: use "data/adTurn_raw_merge"
+  quietly: drop if (resp == 0)
+  quietly: drop if (NoAdminRecord != "Exclude")
+  alpha Q19_3 Q19_6 Q19_10 Q19_13
+  '
+)
+```
+
+### Job Satisfaction - 'Social' satisfaction
+
+```{r}
+stata(
+  'quietly: use "data/adTurn_raw_merge"
+  quietly: drop if (resp == 0)
+  quietly: drop if (NoAdminRecord != "Exclude")
+  alpha Q19_4 Q19_7 Q19_12
+  '
+)
+```
+
+### Job Satisfaction - Supervisory satisfaction 
+
+```{r}
+stata(
+  'quietly: use "data/adTurn_raw_merge"
+  quietly: drop if (resp == 0)
+  quietly: drop if (NoAdminRecord != "Exclude")
+  alpha Q19_5 Q19_8 Q19_14
+  '
+)
+```
+
+### Organizational Commitment
+
+```{r}
+stata(
+  'quietly: use "data/adTurn_raw_merge"
+  quietly: drop if (resp == 0)
+  quietly: drop if (NoAdminRecord != "Exclude")
+  alpha Q20_1 Q20_3 Q20_6 Q20_7 Q20_9 Q20_12 Q20_13
+  '
+)
+```
+
+### Perceived Organizational Support
+
+```{r}
+stata(
+  'quietly: use "data/adTurn_raw_merge"
+  quietly: drop if (resp == 0)
+  quietly: drop if (NoAdminRecord != "Exclude")
+  alpha Q20_2 Q20_4 Q20_8
+  '
+)
+```
+
+### Perceived Job Security
+
+```{r}
+stata(
+  'quietly: use "data/adTurn_raw_merge"
+  quietly: drop if (resp == 0)
+  quietly: drop if (NoAdminRecord != "Exclude")
+  alpha Q20_5 Q20_10
+  '
+)
+```
+
+### Intent to Quit
+
+```{r}
+stata(
+  'quietly: use "data/adTurn_raw_merge"
+  quietly: drop if (resp == 0)
+  quietly: drop if (NoAdminRecord != "Exclude")
+  alpha Q20_11 Q20_14 Q20_15
+  '
+)
+```
+
+### Job Stress
+
+```{r}
+stata(
+  'quietly: use "data/adTurn_raw_merge"
+  quietly: drop if (resp == 0)
+  quietly: drop if (NoAdminRecord != "Exclude")
+  alpha Q26*
+  '
+)
+```
+
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+
+## Impute missing
+
+```{r}
+dat <- stata('
+  mi set flong
+
+  mi register imputed sex age race education experience tenure_sr salary ///
+	ownership prev_position job_sat_* org_* job_stress
+	
+	mi impute pmm sex age race education experience tenure_sr salary ///
+	ownership prev_position job_sat_* org_* job_stress, add(10) rseed(13) ///
+	knn(1) dots
+	
+	save "data/adTurn_mi.dta", replace
+	
+	mi extract 0
+', data.out = TRUE)
+```
+
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+
+## Demographic Table
+
+```{r}
+dat |> 
+  select(quit, sex, age, race, education, experience, catcap, rural, anymc, medi, nonpro) |> 
+  mutate(across(-quit, ~ labelled::to_labelled(.))) |> 
+  set_variable_labels(sex = "Sex", 
+                      age = "Age", 
+                      race = "Race", 
+                      education = "Education", 
+                      experience = "Years experience", 
+                      catcap = "Facility capacity", 
+                      rural = "Facility locale", 
+                      anymc = "Memory Care services", 
+                      medi = "Medicaid acceptance", 
+                      nonpro = "Non-profit status") |> 
+  add_value_labels(
+    quit = c("Didn't quit" = 0, "Quit" = 1), 
+    
+    sex = c("Male" = 1, "Female" = 2), 
+    age = c("<20 years old" = 1, "20-29 years old" = 2, "30-39 years old" = 3, "40-49 years old" = 4, 
+           "50-59 years old" = 5, "60-69 years old" = 6, ">=70 years old" = 7), 
+    race = c("White, non-Hispanic" = 1, "Not White, non-Hispanic" = 2), 
+    education = c("High school diploma or equiv." = 1, "Some college credit" = 2, "Associate's degree" = 3, 
+           "Bachelor's degree" = 4, "Master's degree" = 5, "Professional degree" = 6, "Doctoral degree" = 7), 
+    experience = c("<= 2 years" = 1, "2-5 years" = 2, "5-10 years" = 3, "10-15 years" = 4, "15-20 years" = 5, "20+ years" = 6),
+    
+    anymc = c("No memory care" = 1, "Memory care" = 2), 
+    medi = c("No Medicaid" = 1, "Medicaid" = 2), 
+    nonpro = c("For profit" = 1, "Non-profit" = 2), 
+    catcap = c("Small (6-24)" = 1, "Medium (25-49)" = 2, "Large (50-74)" = 3, "Very large (75+)" = 4), 
+    rural = c("Urban" = 1, "Rural" = 2, "Frontier" = 3)
+  ) |> 
+  mutate(across(everything(), ~ labelled::to_factor(.))) |> 
+  tbl_summary(by = quit, 
+              missing_text = "(Missing)") |> 
+  add_overall() |> 
+  add_difference() |> 
+  add_p()
+```
+
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
+
+## Correlation Matrix
+
+```{r}
+stata('
+use "data/adTurn_clean"
+
+mi set flong
+
+mi register imputed sex age race education experience tenure_sr salary ///
+	ownership prev_position job_sat_* org_* job_stress
+	
+mi impute mvn sex age race education experience tenure_sr salary ///
+	ownership prev_position job_sat_* org_* job_stress, emonly
+	    
+mat Sigma = r(Sigma_em)
+_getcovcorr Sigma, corr shape(full)
+mat C = r(C)
+matlist C
+')
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+:::

@@ -1,0 +1,54 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+_archive/.DS_Store
+_archive/Admin Turnover Codebook.docx
+_archive/Admin_Turnover_Analysis.docx
+_archive/Admin_Turnover_Analysis.html
+_archive/Admin_Turnover_Analysis.log
+_archive/Admin_Turnover_Analysis.pdf
+_archive/Admin_Turnover_Analysis.Rmd
+_archive/Admin_Turnover_Codebook.pdf
+_archive/adTurn_analysis.do
+_archive/adTurn_Analysis.docx
+_archive/adturn_cleaning.do
+_archive/adturn_codebook.csv
+_archive/adturn_codebook.xlsx
+_archive/adTurn_label.do
+_archive/codebook.xlsx
+_archive/dofile_admin_turnover_analysis_030221.do
+_archive/here_anchor.R
+_archive/OR CBC AdminTurnover Analysis 2.qmd
+_archive/OR CBC AdminTurnover Analysis v2.qmd
+_archive/OR CBC AdminTurnover Analysis v3.qmd
+_archive/OR CBC AdminTurnover Analysis v4.qmd
+_archive/OR CBC AdminTurnover Analysis v5.Rmd
+_archive/OR CBC AdminTurnover Analysis v6.Rmd
+_archive/OR CBC AdminTurnover Analysis.docx
+_archive/OR CBC AdminTurnover Analysis.qmd
+_archive/OR CBC AdminTurnover Codebook.docx
+_archive/OR CBC AdminTurnover Codebook.html
+_archive/OR CBC Create Composite Code.Rmd
+_archive/reference-document.docx
+_archive/RStata.do
+_archive/temp.xlsx
+adTurn_analysis.do
+adTurn_prep.do
+IOA_AdminTurnover_local.Rproj
+literature/.DS_Store
+literature/adminturn_scales_021721.docx
+literature/adminturn_scales_021721.pdf
+literature/AdTurn_Questionnaire.pdf
+log/adTurn_analysis.log
+log/adTurn_label.log
+log/adTurn_log.log
+My.log
+Myfile.doc
+OR CBC AdminTurnover Analysis v7.qmd
+OR CBC AdminTurnover Analysis v8.qmd
+OR CBC AdminTurnover Analysis v8.Rmd
+OR CBC AdminTurnover Codebook.qmd
+scripts/01_AdTurn_Prep data.R
+scripts/factorize code.R
+stata outputs/alphas.xlsx

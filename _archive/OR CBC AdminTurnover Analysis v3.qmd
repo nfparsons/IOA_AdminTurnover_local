@@ -1,0 +1,1314 @@
+---
+title: "Oregon Community-Based Care Administrative Turnover Study"
+format: 
+  html: default
+  docx: 
+    toc: false
+    number-sections: false
+editor: source
+execute: 
+  echo: false
+  warning: false
+  error: false
+always_allow_html: true
+---
+
+```{r}
+#| label: packages
+
+if (!require("pacman")) 
+  install.packages("pacman", repos = "https://cran.rstudio.org")
+
+## base packages
+p_load(
+  here, 
+  conflicted, 
+  scales, 
+  skimr, 
+  labelled
+)
+
+## interface packages
+p_load(
+  haven, 
+  readxl, 
+  RStata
+)
+
+## data manipulation
+p_load(
+  tidyverse, 
+  janitor, 
+  lubridate, 
+  janitor,
+  broom, 
+  sjmisc
+)
+
+p_load_gh(
+  "dr-JT/datawrangling"
+)
+
+## modeling 
+p_load(
+  tidymodels, 
+  psych, 
+  doParallel, 
+  doRNG,
+  mice, 
+  lavaan, 
+  semTools
+)
+
+## tables
+p_load(
+  officer, 
+  officedown,
+  flextable, 
+  mschart, 
+  rvg, 
+  gtsummary
+)
+
+## data viz
+p_load(
+  ggthemes,
+  ggsci, 
+  patchwork
+)
+
+here::i_am("_archive/here_anchor.R")
+setwd(here())
+
+conflict_prefer_all("dplyr", quiet = TRUE)
+
+options(scipen = 9999)
+options("RStata.StataPath" = "/Applications/Stata/StataSE.app/Contents/MacOS/stata-se")
+options("RStata.StataVersion" = 17)
+set.seed(13)
+
+rm(list = ls())
+```
+
+
+**Create dataset**
+
+```{r}
+#| label: clean, assemble, and prep data
+#| include: false
+#| eval: false
+
+## load survey data
+### first read_dta loads and transforms completed surveys
+dat <-
+  read_dta("data/AdminTurnover_Survey_Data_012721_020221_USE_THIS.dta") |>
+  select(-ends_with("_TEXT")) |>
+  clean_names() |>
+  mutate(across(everything(), ~ str_trim(.)),
+         across(everything(), ~ tolower(.))) |>
+  na_if(-99) |>
+  mutate(opendate = as_date(opendate),
+         across(starts_with("q"), ~ as.numeric(.))) |>
+  
+  left_join(
+    read_dta(
+      "data/AdminTurnover_Survey_Data_012721_020221_USE_THIS.dta"
+    ) |>
+      clean_names() |>
+      mutate(
+        across(everything(), ~ str_trim(.)),
+        across(everything(), ~ tolower(.))
+      ) |>
+      na_if(-99) |>
+      select(order012621, starts_with("q3_")) |>
+      select(-c(q3_4, q3_7_text)) |>
+      mutate(across(starts_with("q"), ~ as.numeric(.))) |>
+      mutate(across(starts_with("q"), ~ as.logical(.))) |>
+      mutate(across(
+        starts_with("q"), ~ case_when(is.na(.) ~ FALSE,
+                                      TRUE ~ .)
+      )) |>
+      rename(
+        "race_amind" = q3_1,
+        "race_asian" = q3_2,
+        "race_black" = q3_3,
+        "race_hiopi" = q3_5,
+        "race_white" = q3_6,
+        "race_other" = q3_7
+      ) |>
+      pivot_longer(
+        cols = starts_with("race_"),
+        names_to = "race",
+        names_pattern = "race_?(.*)",
+        values_to = "value"
+      ) |>
+      filter(value) |>
+      select(-value) |>
+      chop(race) |>
+      mutate(n_race = map_int(race, length)) |>
+      mutate(q3a = ifelse(n_race == 1, unlist(race), "multi")) |>
+      select(order012621, q3a),
+    by = c("order012621")
+  ) |>
+  
+  left_join(
+    read_dta(
+      "data/AdminTurnover_Survey_Data_012721_020221_USE_THIS.dta"
+    ) |>
+      clean_names() |>
+      mutate(
+        across(everything(), ~ str_trim(.)),
+        across(everything(), ~ tolower(.))
+      ) |>
+      na_if(-99) |>
+      select(order012621, q3_4) |>
+      mutate(across(starts_with("q"), ~ as.numeric(.))) |>
+      mutate(across(starts_with("q"), ~ as.logical(.))) |>
+      mutate(across(
+        starts_with("q"), ~ case_when(is.na(.) ~ FALSE,
+                                      TRUE ~ .)
+      )) |>
+      rename("hispanic" = q3_4) |>
+      pivot_longer(
+        cols = hispanic,
+        names_to = "name",
+        names_pattern = "race_?(.*)",
+        values_to = "q3b"
+      ) |>
+      select(-name),
+    by = c("order012621")
+  ) |>
+  
+  ## join turnover data
+  left_join(
+    read_excel(here("data", "AdTurn List 021622.xlsx")) |>
+      ## clean up variable names
+      clean_names() |>
+      rename_all(tolower) |>
+      ## reformat name strings
+      mutate(
+        across(everything(), ~ str_trim(.)),
+        across(everything(), ~ tolower(.))
+      ) |>
+      ## remove no_admin_record = 'exclude'
+      filter(is.na(no_admin_record)) |>
+      select(ccmu1, firstname, lastname, check1, started, ended_100121),
+    by = c(
+      "ccmu" = "ccmu1",
+      "firstname" = "firstname",
+      "lastname" = "lastname"
+    )
+  ) |>
+  
+  ## join facility turnover data
+  left_join(
+    read_excel(
+      here(
+        "data",
+        "CBC Administrator List 01010-062519_032720_021522.xlsx"
+      )
+    ) |>
+      ## clean up variable names
+      clean_names() |>
+      rename_all(tolower) |>
+      ## reformat name strings
+      mutate(
+        across(everything(), ~ str_trim(.)),
+        across(everything(), ~ tolower(.))
+      ) |>
+      left_join(
+        read_excel(
+          here(
+            "data",
+            "CBC Administrator List 01010-062519_032720_021522.xlsx"
+          )
+        ) |>
+          ## clean up variable names
+          clean_names() |>
+          rename_all(tolower) |>
+          ## reformat name strings
+          mutate(
+            across(everything(), ~ str_trim(.)),
+            across(everything(), ~ tolower(.))
+          ) |>
+          ## calculate the turnover ratio
+          group_by(facid) |>
+          summarize(facility_n = n(),
+                    early = min(started)) |>
+          ungroup() |>
+          mutate(
+            start_year = lubridate::year(lubridate::ymd(early)),
+            end_year = 2021,
+            span = end_year - start_year,
+            turnover_ratio = facility_n / span
+          ),
+        by = ("facid")
+      ) |>
+      select(
+        facid,
+        admfirst,
+        admlast,
+        start_year,
+        end_year,
+        span,
+        turnover_ratio
+      ),
+    by = c(
+      "ccmu" = "facid",
+      "firstname" = "admfirst",
+      "lastname" = "admlast"
+    )
+  ) |>
+  ## clean up
+  distinct() |>
+
+  ## categorize continuous variables
+  transmute(
+    id = order012621, 
+    first_name = firstname, 
+    last_name = lastname, 
+#    position = q10,
+#    employee_start = started, 
+#    employee_end = ended_100121,
+    quit = case_when(!is.na(ended_100121) ~ 1,
+                     TRUE ~ 0),
+    resp = as.numeric(resp), 
+    ccmu = ccmu, 
+    fac_name = facname, 
+#    fac_start = start_year, 
+#    fac_end = end_year, 
+#    fac_span = span, 
+    turnover_ratio = case_when(
+      turnover_ratio <= .25 ~ 1,
+      turnover_ratio > .25 & turnover_ratio <= .50 ~ 2,
+      turnover_ratio > .50 & turnover_ratio <= .75 ~ 3,
+      turnover_ratio > .75 & turnover_ratio <= 1.0 ~ 4,
+      turnover_ratio > 1.0 ~ 5,
+      TRUE ~ NA_real_
+    ),
+    across(c(anymc, medi, nonpro), ~ as.numeric(.)),
+    catcap = case_when(
+      catcap == 0 ~ 1,
+      catcap == 1 ~ 2,
+      catcap == 2 ~ 3,
+      catcap == 3 ~ 4,
+      TRUE ~ NA_real_
+    ),
+    rural = case_when(rural == 0 ~ 1,
+                      rural == 1 ~ 2,
+                      rural == 2 ~ 3,
+                      TRUE ~ NA_real_),
+    
+    q1 = case_when(q1 == 1 ~ 1, # Male
+                   q1 == 2 ~ 2, # Female
+                   q1 == 3 ~ NA_real_, # Prefer to self-describe
+                   q1 == 4 ~ NA_real_, # Prefer not to answer
+                   TRUE ~ NA_real_),
+    
+    q2 = case_when(
+      q2 < 20 ~ 1,
+      q2 >= 20 & q2 < 30 ~ 2,
+      q2 >= 30 & q2 < 40 ~ 3,
+      q2 >= 40 & q2 < 50 ~ 4,
+      q2 >= 50 & q2 < 60 ~ 5,
+      q2 >= 60 & q2 < 70 ~ 6,
+      q2 >= 70 ~ 7,
+      TRUE ~ NA_real_
+    ),
+    
+    q3a = case_when(
+      q3a == "amind" ~ 1,
+      q3a == "asian" ~ 2,
+      q3a == "black" ~ 3,
+      q3a == "hiopi" ~ 4,
+      q3a == "multi" ~ 5,
+      q3a == "other" ~ 6,
+      q3a == "white" ~ 7,
+      TRUE ~ NA_real_
+    ),
+    q3b = case_when(q3_4 == TRUE ~ 1,
+                    TRUE ~ 0),
+    
+    q4 = q4, 
+    
+    q5_01 = case_when(q5_1 == 1 ~ 1,
+                      q5_1 == 2 ~ 0, 
+                      TRUE ~ 0), 
+    q5_02 = case_when(q5_2 == 1 ~ 1,
+                      q5_2 == 2 ~ 0, 
+                      TRUE ~ 0), 
+    q5_03 = case_when(q5_3 == 1 ~ 1,
+                      q5_3 == 2 ~ 0, 
+                      TRUE ~ 0), 
+    q5_04 = case_when(q5_4 == 1 ~ 1,
+                      q5_4 == 2 ~ 0, 
+                      TRUE ~ 0), 
+    q5_05 = case_when(q5_5 == 1 ~ 1,
+                      q5_5 == 2 ~ 0, 
+                      TRUE ~ 0), 
+    
+    q6_01 = case_when(q6_1 == 1 ~ 1,
+                      q6_1 == 2 ~ 0, 
+                      TRUE ~ 0), 
+    q6_02 = case_when(q6_2 == 1 ~ 1,
+                      q6_2 == 2 ~ 0, 
+                      TRUE ~ 0), 
+    q6_03 = case_when(q6_3 == 1 ~ 1,
+                      q6_3 == 2 ~ 0, 
+                      TRUE ~ 0), 
+    q6_04 = case_when(q6_4 == 1 ~ 1,
+                      q6_4 == 2 ~ 0, 
+                      TRUE ~ 0), 
+    q6_05 = case_when(q6_5 == 1 ~ 1,
+                      q6_5 == 2 ~ 0, 
+                      TRUE ~ 0), 
+    q6_06 = case_when(q6_6 == 1 ~ 1,
+                      q6_6 == 2 ~ 0, 
+                      TRUE ~ 0), 
+    
+    q7 = case_when(q7 == 1 ~ 4,
+                   q7 == 2 ~ 3,
+                   q7 == 3 ~ 2,
+                   q7 == 4 ~ 1,
+                   TRUE ~ NA_real_),
+    
+    q8_01 = q8_1, 
+    q8_02 = q8_2, 
+    q8_03 = q8_3, 
+    q8_04 = q8_4, 
+    q8_05 = q8_5, 
+
+    q9_01 = q9_1, 
+    q9_02 = q9_2, 
+    q9_03 = q9_3, 
+    q9_04 = q9_4, 
+    q9_05 = q9_5,
+    
+    q10a = case_when(q10a == 2 ~ 0,
+                     q10a == 1 ~ 1,
+                     TRUE ~ NA_real_),
+    
+    q11 = case_when(
+      q11 == 20192020 ~ 2,
+      q11 == 2017 ~ 3,
+      q11 < 1 ~ 1,
+      q11 >= 1 & q11 < 2 ~ 2,
+      q11 >= 2 & q11 < 5 ~ 3,
+      q11 > 5 ~ 4,
+      TRUE ~ NA_real_
+    ),
+    
+    q12 = case_when(q12 == 1 ~ 1,
+                    q12 == 2 ~ 0,
+                    TRUE ~ NA_real_),
+    
+    q13 = case_when(
+      q13_1 == 1 & is.na(q13_2) ~ 1,
+      ## Assisted Living
+      q13_2 == 1 & is.na(q13_1) ~ 2,
+      ## Memory Care
+      q13_1 == 1 &
+        q13_2 == 1 ~ 3,
+      ## Assisted Living and Memory Care
+      q13_3 == 1 ~ 4,
+      ## No, first community
+      TRUE ~ NA_real_
+    ),
+    
+    q14 = case_when(is.na(q14) ~ 0,
+                    TRUE ~ q14),
+    
+    q15_01 = case_when(q15_1 == 1 ~ 1, # Yes
+                      q15_1 == 2 ~ 0, # No
+                      TRUE ~ 0),
+    q15_02 = case_when(q15_2 == 1 ~ 1, # Yes
+                      q15_2 == 2 ~ 0, # No
+                      TRUE ~ 0),
+    q15_03 = case_when(q15_3 == 1 ~ 1, # Yes
+                      q15_3 == 2 ~ 0, # No
+                      TRUE ~ 0),
+    q15_04 = case_when(q15_4 == 1 ~ 1, # Yes
+                      q15_4 == 2 ~ 0, # No
+                      TRUE ~ 0),
+    q15_05 = case_when(q15_5 == 1 ~ 1, # Yes
+                      q15_5 == 2 ~ 0, # No
+                      TRUE ~ 0),
+    q15_06 = case_when(q15_6 == 1 ~ 1, # Yes
+                      q15_6 == 2 ~ 0, # No
+                      TRUE ~ 0),
+    q15_07 = case_when(q15_7 == 1 ~ 1, # Yes
+                      q15_7 == 2 ~ 0, # No
+                      TRUE ~ 0),
+    
+    q16 = case_when(
+      q16 < 9.5 ~ 1,
+      q16 >= 9.5 & q16 < 15 ~ 2,
+      q16 >= 15 & q16 < 22 ~ 3,
+      q16 >= 22 ~ 4,
+      TRUE ~ NA_real_
+    ),
+    
+    q17 = case_when(q17 == 6 ~ 0,
+                    q17 == 7 ~ 0,
+                    TRUE ~ q17),
+    
+    q18_01 = case_when(q18_1 == 1 ~ 1, 
+                       q18_1 == 2 ~ 0, 
+                       q18_1 == 3 ~ 0, 
+                       TRUE ~ 0), 
+    q18_02 = case_when(q18_2 == 1 ~ 1, 
+                       q18_2 == 2 ~ 0, 
+                       q18_2 == 3 ~ 0, 
+                       TRUE ~ 0), 
+    q18_03 = case_when(q18_3 == 1 ~ 1, 
+                       q18_3 == 2 ~ 0, 
+                       q18_3 == 3 ~ 0, 
+                       TRUE ~ 0), 
+    q18_04 = case_when(q18_4 == 1 ~ 1, 
+                       q18_4 == 2 ~ 0, 
+                       q18_4 == 3 ~ 0, 
+                       TRUE ~ 0), 
+    q18_05 = case_when(q18_5 == 1 ~ 1, 
+                       q18_5 == 2 ~ 0, 
+                       q18_5 == 3 ~ 0, 
+                       TRUE ~ 0), 
+    q18_06 = case_when(q18_6 == 1 ~ 1, 
+                       q18_6 == 2 ~ 0, 
+                       q18_6 == 3 ~ 0, 
+                       TRUE ~ 0), 
+    q18_07 = case_when(q18_7 == 1 ~ 1, 
+                       q18_7 == 2 ~ 0, 
+                       q18_7 == 3 ~ 0, 
+                       TRUE ~ 0), 
+    q18_08 = case_when(q18_8 == 1 ~ 1, 
+                       q18_8 == 2 ~ 0, 
+                       q18_8 == 3 ~ 0, 
+                       TRUE ~ 0), 
+    q18_09 = case_when(q18_9 == 1 ~ 1, 
+                       q18_9 == 2 ~ 0, 
+                       q18_9 == 3 ~ 0, 
+                       TRUE ~ 0), 
+    
+    q19_01 = case_when(q19_1 == 6 ~ 0, 
+                       TRUE ~ q19_1),
+    q19_02 = case_when(q19_2 == 6 ~ 0, 
+                       TRUE ~ q19_2),
+    q19_03 = case_when(q19_3 == 6 ~ 0, 
+                       TRUE ~ q19_3),
+    q19_04 = case_when(q19_4 == 6 ~ 0, 
+                       TRUE ~ q19_4),
+    q19_05 = case_when(q19_5 == 6 ~ 0, 
+                       TRUE ~ q19_5),
+    q19_06 = case_when(q19_6 == 6 ~ 0, 
+                       TRUE ~ q19_6),
+    q19_07 = case_when(q19_7 == 6 ~ 0, 
+                       TRUE ~ q19_7),
+    q19_08 = case_when(q19_8 == 6 ~ 0, 
+                       TRUE ~ q19_8),
+    q19_09 = case_when(q19_9 == 6 ~ 0, 
+                       TRUE ~ q19_9),
+    q19_10 = case_when(q19_10 == 6 ~ 0, 
+                       TRUE ~ q19_10),
+    q19_11 = case_when(q19_11 == 6 ~ 0, 
+                       TRUE ~ q19_11),
+    q19_12 = case_when(q19_12 == 6 ~ 0, 
+                       TRUE ~ q19_12),
+    q19_13 = case_when(q19_13 == 6 ~ 0, 
+                       TRUE ~ q19_13),
+    q19_14 = case_when(q19_14 == 6 ~ 0, 
+                       TRUE ~ q19_14),
+    
+    q20_01 = case_when(q20_1 == 6 ~ 0, 
+                       TRUE ~ q20_1),
+    q20_02 = case_when(q20_2 == 6 ~ 0, 
+                       TRUE ~ q20_2),
+    q20_03 = case_when(q20_3 == 6 ~ 0, 
+                       TRUE ~ q20_3),
+    q20_04 = case_when(q20_4 == 6 ~ 0, 
+                       TRUE ~ q20_4),
+    q20_05 = case_when(q20_5 == 6 ~ 0, 
+                       TRUE ~ q20_5),
+    q20_06 = case_when(q20_6 == 6 ~ 0, 
+                       TRUE ~ q20_6),
+    q20_07 = case_when(q20_7 == 6 ~ 0, 
+                       TRUE ~ q20_7),
+    q20_08 = case_when(q20_8 == 6 ~ 0, 
+                       TRUE ~ q20_8),
+    q20_09 = case_when(q20_9 == 6 ~ 0, 
+                       TRUE ~ q20_9),
+    q20_10 = case_when(q20_10 == 6 ~ 0, 
+                       TRUE ~ q20_10),
+    q20_11 = case_when(q20_11 == 6 ~ 0, 
+                       TRUE ~ q20_11),
+    q20_12 = case_when(q20_12 == 6 ~ 0, 
+                       TRUE ~ q20_12),
+    q20_13 = case_when(q20_13 == 6 ~ 0, 
+                       TRUE ~ q20_13),
+    q20_14 = case_when(q20_14 == 6 ~ 0, 
+                       TRUE ~ q20_14),
+    q20_15 = case_when(q20_15 == 6 ~ 0, 
+                       TRUE ~ q20_15), 
+    
+    q21 = case_when(q21 == 2 ~ 0,
+                    TRUE ~ q21),
+    
+    q22_01 = case_when(q22_1 == 1 ~ 1, 
+                       TRUE ~ 0),
+    q22_02 = case_when(q22_2 == 1 ~ 1, 
+                       TRUE ~ 0),
+    q22_03 = case_when(q22_3 == 1 ~ 1, 
+                       TRUE ~ 0),
+    q22_04 = case_when(q22_4 == 1 ~ 1, 
+                       TRUE ~ 0),
+    q22_05 = case_when(q22_5 == 1 ~ 1, 
+                       TRUE ~ 0),
+    q22_06 = case_when(q22_6 == 1 ~ 1, 
+                       TRUE ~ 0),
+    q22_07 = case_when(q22_7 == 1 ~ 1, 
+                       TRUE ~ 0),
+    q22_08 = case_when(q22_8 == 1 ~ 1, 
+                       TRUE ~ 0),
+    q22_09 = case_when(q22_9 == 1 ~ 1, 
+                       TRUE ~ 0),
+    q22_10 = case_when(q22_10 == 1 ~ 1, 
+                       TRUE ~ 0),
+    q22_11 = case_when(q22_11 == 1 ~ 1, 
+                       TRUE ~ 0),
+    q22_12 = case_when(q22_12 == 1 ~ 1, 
+                       TRUE ~ 0),
+    q22_13 = case_when(q22_13 == 1 ~ 1, 
+                       TRUE ~ 0),
+    q22_14 = case_when(q22_14 == 1 ~ 1, 
+                       TRUE ~ 0),
+    q22_15 = case_when(q22_15 == 1 ~ 1, 
+                       TRUE ~ 0), 
+    q22_16 = case_when(q22_16 == 1 ~ 1, 
+                       TRUE ~ 0),
+    q22_17 = case_when(q22_17 == 1 ~ 1, 
+                       TRUE ~ 0),
+    q22_18 = case_when(q22_18 == 1 ~ 1, 
+                       TRUE ~ 0),
+    q22_19 = case_when(q22_19 == 1 ~ 1, 
+                       TRUE ~ 0),
+    q22_20 = case_when(q22_20 == 1 ~ 1, 
+                       TRUE ~ 0),
+    q22_21 = case_when(q22_21 == 1 ~ 1, 
+                       TRUE ~ 0),
+    q22_22 = case_when(q22_22 == 1 ~ 1, 
+                       TRUE ~ 0),
+    q22_23 = case_when(q22_23 == 1 ~ 1, 
+                       TRUE ~ 0),
+    
+    q23 = case_when(q23 == 5 ~ 1,
+                    q23 == 4 ~ 2,
+                    q23 == 3 ~ 3,
+                    q23 == 2 ~ 4,
+                    q23 == 1 ~ 5,
+                    TRUE ~ NA_real_),
+    
+    q24 = case_when(q24 == 5 ~ 1,
+                    q24 == 4 ~ 2,
+                    q24 == 3 ~ 3,
+                    q24 == 2 ~ 4,
+                    q24 == 1 ~ 5,
+                    TRUE ~ NA_real_),
+    
+    q25 = case_when(q25 == 5 ~ 1,
+                    q25 == 4 ~ 2,
+                    q25 == 3 ~ 3,
+                    q25 == 2 ~ 4,
+                    q25 == 1 ~ 5,
+                    TRUE ~ NA_real_), 
+    
+    q26_01 = case_when(q26_1 == 6 ~ 0, 
+                       TRUE ~ q26_1),
+    q26_02 = case_when(q26_2 == 6 ~ 0, 
+                       TRUE ~ q26_2),
+    q26_03 = case_when(q26_3 == 6 ~ 0, 
+                       TRUE ~ q26_3),
+    q26_04 = case_when(q26_4 == 6 ~ 0, 
+                       TRUE ~ q26_4),
+    q26_05 = case_when(q26_5 == 6 ~ 0, 
+                       TRUE ~ q26_5),
+    q26_06 = case_when(q26_6 == 6 ~ 0, 
+                       TRUE ~ q26_6),
+    q26_07 = case_when(q26_7 == 6 ~ 0, 
+                       TRUE ~ q26_7),
+    q26_08 = case_when(q26_8 == 6 ~ 0, 
+                       TRUE ~ q26_8),
+    q26_09 = case_when(q26_9 == 6 ~ 0, 
+                       TRUE ~ q26_9),
+    q26_10 = case_when(q26_10 == 6 ~ 0, 
+                       TRUE ~ q26_10)
+  ) |> 
+  set_variable_labels(
+    id = "Unique Respondent ID", 
+    first_name = "Respondent first name", 
+    last_name = "Respondent last name", 
+#    position = "Respondent position",
+#    employee_start = "Respondent position start date", 
+#    employee_end = "Respondent position end date", 
+    quit = "Did Respondent leave position?", 
+    resp = "Responded to survey", 
+    ccmu = "CCMU", 
+    fac_name = "Facility Name", 
+#    fac_start = "Facility open date", 
+#    fac_end = "Facility close date/Survey date", 
+#    fac_span = "Facility years open", 
+    turnover_ratio = "Turnover ratio", 
+    anymc = "Memory Care",
+    medi = "Medicaid", 
+    nonpro = "Non-profit", 
+    catcap = "Capacity", 
+    rural = "Facility location", 
+    q1 = "Gender", 
+    q2 = "Age", 
+    q3a = "Race", 
+    q3b = "Ethnicity", 
+    q4 = "Education", 
+    q5_01 = "Degree Curriculum: Aging or older adults", 
+    q5_02 = "Degree Curriculum: Disabilities", 
+    q5_03 = "Degree Curriculum: Behavioral or mental health", 
+    q5_04 = "Degree Curriculum: Long-term services and supports", 
+    q5_05 = "Degree Curriculum: Healthcare administration", 
+    q6_01 = "Certifications: Nursing home administrator", 
+    q6_02 = "Certifications: Registered nurse (RN)", 
+    q6_03 = "Certifications: Licensed practical/vocational nurse (LPN/LVN)", 
+    q6_04 = "Certifications: Certified nursing assistant (CNA)", 
+    q6_05 = "Certifications: Certified medication aide (CMA)", 
+    q7 = "Last attended LAO/OHCA", 
+    q8_01 = "Satisfaction with training program: Rules and regulations (e.g. health, fire)", 
+    q8_02 = "Satisfaction with training program: Finance, accounting", 
+    q8_03 = "Satisfaction with training program: Human resources and staffing", 
+    q8_04 = "Satisfaction with training program: Physical environment", 
+    q8_05 = "Satisfaction with training program: Leadership skills", 
+    q9_01 = "My training sufficiently prepared me for this position", 
+    q9_02 = "I received sufficient onboarding support when I started this position", 
+    q9_03 = "There are sufficient ongoing training opportunities for me", 
+    q9_04 = "The existing opportunities for continuing education are relevant to my work", 
+    q9_05 = "My employer makes it possible for me to attend training", 
+    q10a = "Community ownership", 
+    q11 = "Administrator tenure", 
+    q12 = "Worked at other position at this community", 
+    q13 = "Administrator at other community", 
+    q14 = "Reason for leaving prior community", 
+    q15_01 = "Worked in setting prior: Adult foster/care home", 
+    q15_02 = "Worked in setting prior: Nursing home", 
+    q15_03 = "Worked in setting prior: Home health agency", 
+    q15_04 = "Worked in setting prior: Home care", 
+    q15_05 = "Worked in setting prior: Hospital", 
+    q15_06 = "Worked in setting prior: Adult day care", 
+    q16 = "Years worked in LTC/HC", 
+    q17 = "Current annual salary", 
+    q18_01 = "Benefits: Health insurance (personal)", 
+    q18_02 = "Benefits: Health insurance (family)", 
+    q18_03 = "Benefits: Paid personal/vacation time", 
+    q18_04 = "Benefits: Paid sick leave", 
+    q18_05 = "Benefits: Paid holidays", 
+    q18_06 = "Benefits: Pension", 
+    q18_07 = "Benefits: 401(k)/403(b)", 
+    q18_08 = "Benefits: Life insurance",
+    q18_09 = "Benefits: Other", 
+    q19_01 = "Satisfaction with Security: The amount of job security I have", 
+    q19_02 = "Satisfaction with Compensation: The amount of pay and fringe benefits I receive", 
+    q19_03 = "Growth Satisfaction: The amount of personal growth and development I get in doing my job", 
+    q19_04 = "Social Satisfaction: The people I talk to and work with on my job", 
+    q19_05 = "Supervisory Satisfaction: The degree of respect and fair treatment I receive from my boss", 
+    q19_06 = "Growth Satisfaction: The feeling of worthwhile accomplishment I get from doing my job", 
+    q19_07 = "Social Satisfaction: The chance to get to know other people while on the job", 
+    q19_08 = "Supervisory Satisfaction: The amount of support and guidance I receive from my supervisor", 
+    q19_09 = "Satisfaction with Compensation: The degree to which I am fairly paid for what I contribute to this organization", 
+    q19_10 = "Growth Satisfaction: The amount of independent thought and action I can exercise in my job", 
+    q19_11 = "Satisfaction with Security: How secure things look for me in the future in this organization", 
+    q19_12 = "Social Satisfaction: The chance to help other people while at work", 
+    q19_13 = "Growth Satisfaction: The amount of challenges in my job", 
+    q19_14 = "Supervisory Satisfaction: The overall quality of supervision I receive in my work", 
+    q20_01 = "Organizational Commitment: I feel a strong sense of 'belonging' to my org.", 
+    q20_02 = "Perceived Organizational Support: My org. really cares about my well-being", 
+    q20_03 = "Organizational Commitment: I feel like 'part of the family' at this org.", 
+    q20_04 = "Perceived Organizational Support: Help is available from my org. when I have a problem", 
+    q20_05 = "Perceived Job Security: My job at this org. is secure", 
+    q20_06 = "Organizational Commitment: I feel 'emotionally attached' to this org.", 
+    q20_07 = "Organizational Commitment: I would feel guilty if I left this org. right now", 
+    q20_08 = "Perceived Organizational Support: My org. strongly considers my goals and values", 
+    q20_09 = "Organizational Commitment: I owe a great deal to this org.", 
+    q20_10 = "Perceived Job Security: I am confident that I will be able to work for this org. as long as I wish", 
+    q20_11 = "Intent to Quit: I frequently think of quitting my current job", 
+    q20_12 = "Organizational Commitment: It would be hard for me to leave my job right now even if I wanted to", 
+    q20_13 = "Organizational Commitment: Right now, staying at my job at this org. is a matter of necessity as much as desire", 
+    q20_14 = "Intent to Quit: I will probably look for another job in the next year", 
+    q20_15 = "Intent to Quit: There is a good chance that I will leave this job in the next year or so",
+    q21 = "Are there any job skills you would like to get training for?", 
+    q22_01 = "Seek training: Work-life balance", 
+    q22_02 = "Seek training: Conducting effective meetings", 
+    q22_03 = "Seek training: Being an effective leader", 
+    q22_04 = "Seek training: Leading the change process", 
+    q22_05 = "Seek training: Analyzing and interpreting data", 
+    q22_06 = "Seek training: Informed decision making", 
+    q22_07 = "Seek training: Creating and communicating a vision", 
+    q22_08 = "Seek training: Developing and implementing a strategic plan", 
+    q22_09 = "Seek training: Delegating tasks to others", 
+    q22_10 = "Seek training: Inspiring and motivating staff", 
+    q22_11 = "Seek training: Prioritizing", 
+    q22_12 = "Seek training: Problem solving", 
+    q22_13 = "Seek training: Time management", 
+    q22_14 = "Seek training: Conflict resolution and mediation", 
+    q22_15 = "Seek training: Oral and written communications", 
+    q22_16 = "Seek training: Cultivating effective relationships", 
+    q22_18 = "Seek training: Person-centered care/culture change", 
+    q22_19 = "Seek training: Team building", 
+    q22_20 = "Seek training: Managing teams", 
+    q22_21 = "Seek training: Consensus building", 
+    q22_22 = "Seek training: Active listening", 
+    q22_23 = "Seek training: Coaching, teaching, and mentoring", 
+    q23 = "Would you say your health in general is excellent, very good, good, fair, or poor?", 
+    q24 = "How often do you feel worried, nervous, or anxious?", 
+    q25 = "How often do you feel depressed?", 
+    q26_01 = "Time Stress: Working here makes it hard to spend enough time with my family", 
+    q26_02 = "Time Stress: Working here leaves little time for other activities", 
+    q26_03 = "Time Stress: I have too much work and too little time to do it in", 
+    q26_04 = "Time Stress: I sometimes dread the telephone ringing at home because the call might be job-related", 
+    q26_05 = "Time Stress: I feel like I never had a day off", 
+    q26_06 = "Anxiety: There are lots of times when my job drives me right up the wall", 
+    q26_07 = "Anxiety: Sometimes when I think about my job I get a tight feeling in my chest", 
+    q26_08 = "Anxiety: I feel guilty when I take time off from my job", 
+    q26_09 = "Anxiety: My job gets to me more than it should", 
+    q26_10 = "Anxiety: I have felt fidgety or nervous as a result of my job"
+  ) |> 
+  add_value_labels(
+    quit = c("Didn't quit" = 0, "Quit" = 1), 
+    turnover_ratio = c("<=.25" = 1, ".26-.50" = 2, ".51-.75" = 3, ".76-1.0" = 4, ">1.0" = 5), 
+    anymc = c("No memory care" = 0, "Memory care" = 1), 
+    medi = c("No Medicaid" = 0, "Medicaid" = 1), 
+    nonpro = c("For profit" = 0, "Non-profit" = 1), 
+    catcap = c("Small (6-24)" = 1, "Medium (25-49)" = 2, "Large (50-74)" = 3, "Very large (75+)" = 4), 
+    rural = c("Urban" = 1, "Rural" = 2, "Frontier" = 3), 
+    q1 = c("Male" = 1, "Female" = 2), 
+    q2 = c("<20 years old" = 1, "20-29 years old" = 2, "30-39 years old" = 3, "40-49 years old" = 4, 
+           "50-59 years old" = 5, "60-69 years old" = 6, ">=70 years old" = 7), 
+    q3a = c("American Indian or Alaska Native" = 1, "Asian" = 2, "Black" = 3, "Hawaiian or Pacific Islander" = 4, 
+            "Multiple Races" = 5, "Other" = 6, "White" = 7), 
+    q3b = c("Not Hispanic" = 0, "Hispanic" = 1), 
+    q4 = c("High school diploma or equiv." = 1, "Some college credit" = 2, "Associate's degree" = 3, 
+           "Bachelor's degree" = 4, "Master's degree" = 5, "Professional degree" = 6, "Doctoral degree" = 7), 
+    q5_01 = c("No" = 0, "Yes" = 1),
+    q5_02 = c("No" = 0, "Yes" = 1),
+    q5_03 = c("No" = 0, "Yes" = 1),
+    q5_04 = c("No" = 0, "Yes" = 1),
+    q5_05 = c("No" = 0, "Yes" = 1),
+    q6_01 = c("No, never" = 1, "Yes, previously" = 2, "Yes, currently" = 3), 
+    q6_02 = c("No, never" = 1, "Yes, previously" = 2, "Yes, currently" = 3), 
+    q6_03 = c("No, never" = 1, "Yes, previously" = 2, "Yes, currently" = 3), 
+    q6_04 = c("No, never" = 1, "Yes, previously" = 2, "Yes, currently" = 3), 
+    q6_05 = c("No, never" = 1, "Yes, previously" = 2, "Yes, currently" = 3), 
+    q6_06 = c("No, never" = 1, "Yes, previously" = 2, "Yes, currently" = 3), 
+    q7 = c("2017 or before" = 1, "2018" = 2, "2019" = 3, "2020" = 4), 
+    q8_01 = c("Very dissatisfied" = 1, "Dissatisfied" = 2, "Neither satisfied nor dissatisfied" = 3, 
+              "Satisfied" = 4, "Very satisfied" = 5), 
+    q8_02 = c("Very dissatisfied" = 1, "Dissatisfied" = 2, "Neither satisfied nor dissatisfied" = 3, 
+              "Satisfied" = 4, "Very satisfied" = 5), 
+    q8_03 = c("Very dissatisfied" = 1, "Dissatisfied" = 2, "Neither satisfied nor dissatisfied" = 3, 
+              "Satisfied" = 4, "Very satisfied" = 5), 
+    q8_04 = c("Very dissatisfied" = 1, "Dissatisfied" = 2, "Neither satisfied nor dissatisfied" = 3, 
+              "Satisfied" = 4, "Very satisfied" = 5), 
+    q8_05 = c("Very dissatisfied" = 1, "Dissatisfied" = 2, "Neither satisfied nor dissatisfied" = 3, 
+              "Satisfied" = 4, "Very satisfied" = 5), 
+    q9_01 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+              "Agree" = 4, "Strongly agree" = 5), 
+    q9_02 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+              "Agree" = 4, "Strongly agree" = 5), 
+    q9_03 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+              "Agree" = 4, "Strongly agree" = 5), 
+    q9_04 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+              "Agree" = 4, "Strongly agree" = 5), 
+    q9_05 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+              "Agree" = 4, "Strongly agree" = 5), 
+    q10a = c("No" = 0, "Yes" = 1), 
+    q11 = c("< 1 year" = 1, "1-2 years" = 2, "2-5 years" = 3, "> 5 years" = 4), 
+    q12 = c("No" = 0, "Yes" = 1), 
+    q13 = c("Assisted living/residential care (not endorsed for memory care)" = 1, 
+            "Memory care community" = 2, 
+            "Assisted living/residential care (not endorsed for memory care & memory care community" = 3, 
+            "No, this is the first community of which I am the administrator" = 4), 
+    q14 = c("I transferred to this community in the same organization" = 1, 
+            "I quit" = 2, 
+            "I was laid off" = 3, 
+            "It closed" = 4, 
+            "Other" = 5), 
+    q15_01 = c("No" = 0, "Yes" = 1), 
+    q15_02 = c("No" = 0, "Yes" = 1), 
+    q15_03 = c("No" = 0, "Yes" = 1), 
+    q15_04 = c("No" = 0, "Yes" = 1), 
+    q15_05 = c("No" = 0, "Yes" = 1), 
+    q15_06 = c("No" = 0, "Yes" = 1), 
+    q15_07 = c("No" = 0, "Yes" = 1), 
+    q16 = c("< 9.5 years" = 1, "9.5-15 years" = 2, "15-22 years" = 3, "> 22 years" = 4), 
+    q17 = c("<= $24,999" = 1, "$25,000-$49,000" = 2, "$50,000-$74,999" = 3, "$75,000-$99,999" = 4, 
+            "$100,000+" = 5, "Prefer not to answer" = 6, "Other" = 7), 
+    q18_01 = c("No" = 0, "Yes" = 1), 
+    q18_02 = c("No" = 0, "Yes" = 1), 
+    q18_03 = c("No" = 0, "Yes" = 1), 
+    q18_04 = c("No" = 0, "Yes" = 1), 
+    q18_05 = c("No" = 0, "Yes" = 1), 
+    q18_06 = c("No" = 0, "Yes" = 1), 
+    q18_07 = c("No" = 0, "Yes" = 1), 
+    q18_08 = c("No" = 0, "Yes" = 1), 
+    q18_09 = c("No" = 0, "Yes" = 1), 
+    q19_01 = c("Not applicable" = 0, "Very dissatisfied" = 1, "Dissatisfied" = 2, 
+               "Neither satisfied nor dissatisfied" = 3, "Satisfied" = 4, 
+               "Very satisfied" = 5), 
+    q19_02 = c("Not applicable" = 0, "Very dissatisfied" = 1, "Dissatisfied" = 2, 
+               "Neither satisfied nor dissatisfied" = 3, "Satisfied" = 4, 
+               "Very satisfied" = 5), 
+    q19_03 = c("Not applicable" = 0, "Very dissatisfied" = 1, "Dissatisfied" = 2, 
+               "Neither satisfied nor dissatisfied" = 3, "Satisfied" = 4, 
+               "Very satisfied" = 5), 
+    q19_04 = c("Not applicable" = 0, "Very dissatisfied" = 1, "Dissatisfied" = 2, 
+               "Neither satisfied nor dissatisfied" = 3, "Satisfied" = 4, 
+               "Very satisfied" = 5), 
+    q19_05 = c("Not applicable" = 0, "Very dissatisfied" = 1, "Dissatisfied" = 2, 
+               "Neither satisfied nor dissatisfied" = 3, "Satisfied" = 4, 
+               "Very satisfied" = 5), 
+    q19_06 = c("Not applicable" = 0, "Very dissatisfied" = 1, "Dissatisfied" = 2, 
+               "Neither satisfied nor dissatisfied" = 3, "Satisfied" = 4, 
+               "Very satisfied" = 5), 
+    q19_07 = c("Not applicable" = 0, "Very dissatisfied" = 1, "Dissatisfied" = 2, 
+               "Neither satisfied nor dissatisfied" = 3, "Satisfied" = 4, 
+               "Very satisfied" = 5), 
+    q19_08 = c("Not applicable" = 0, "Very dissatisfied" = 1, "Dissatisfied" = 2, 
+               "Neither satisfied nor dissatisfied" = 3, "Satisfied" = 4, 
+               "Very satisfied" = 5), 
+    q19_09 = c("Not applicable" = 0, "Very dissatisfied" = 1, "Dissatisfied" = 2, 
+               "Neither satisfied nor dissatisfied" = 3, "Satisfied" = 4, 
+               "Very satisfied" = 5), 
+    q19_10 = c("Not applicable" = 0, "Very dissatisfied" = 1, "Dissatisfied" = 2, 
+               "Neither satisfied nor dissatisfied" = 3, "Satisfied" = 4, 
+               "Very satisfied" = 5), 
+    q19_11 = c("Not applicable" = 0, "Very dissatisfied" = 1, "Dissatisfied" = 2, 
+               "Neither satisfied nor dissatisfied" = 3, "Satisfied" = 4, 
+               "Very satisfied" = 5), 
+    q19_12 = c("Not applicable" = 0, "Very dissatisfied" = 1, "Dissatisfied" = 2, 
+               "Neither satisfied nor dissatisfied" = 3, "Satisfied" = 4, 
+               "Very satisfied" = 5), 
+    q19_13 = c("Not applicable" = 0, "Very dissatisfied" = 1, "Dissatisfied" = 2, 
+               "Neither satisfied nor dissatisfied" = 3, "Satisfied" = 4, 
+               "Very satisfied" = 5), 
+    q19_14 = c("Not applicable" = 0, "Very dissatisfied" = 1, "Dissatisfied" = 2, 
+               "Neither satisfied nor dissatisfied" = 3, "Satisfied" = 4, 
+               "Very satisfied" = 5), 
+    q20_01 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+              "Agree" = 4, "Strongly agree" = 5), 
+    q20_02 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+              "Agree" = 4, "Strongly agree" = 5), 
+    q20_03 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+              "Agree" = 4, "Strongly agree" = 5), 
+    q20_04 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+              "Agree" = 4, "Strongly agree" = 5), 
+    q20_05 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+              "Agree" = 4, "Strongly agree" = 5), 
+    q20_06 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+              "Agree" = 4, "Strongly agree" = 5), 
+    q20_07 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+              "Agree" = 4, "Strongly agree" = 5), 
+    q20_08 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+              "Agree" = 4, "Strongly agree" = 5), 
+    q20_09 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+              "Agree" = 4, "Strongly agree" = 5), 
+    q20_10 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+              "Agree" = 4, "Strongly agree" = 5), 
+    q20_11 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+              "Agree" = 4, "Strongly agree" = 5), 
+    q20_12 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+              "Agree" = 4, "Strongly agree" = 5), 
+    q20_13 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+              "Agree" = 4, "Strongly agree" = 5), 
+    q20_14 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+              "Agree" = 4, "Strongly agree" = 5), 
+    q20_15 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+              "Agree" = 4, "Strongly agree" = 5), 
+    q21 = c("No" = 0, "Yes" = 1), 
+    q22_01 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_02 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_03 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_04 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_05 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_06 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_07 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_08 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_09 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_10 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_11 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_12 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_13 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_14 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_15 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_16 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_17 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_18 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_19 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_20 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_21 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_22 = c("Unchecked" = 0, "Checked" = 1), 
+    q22_23 = c("Unchecked" = 0, "Checked" = 1), 
+    q23 = c("Poor" = 1, "Fair" = 2, "Good" = 3, "Very good" = 4, "Excellent" = 5), 
+    q24 = c("Never" = 1, "A few times a year" = 2, "Monthly" = 3, "Weekly" = 4, "Daily" = 5), 
+    q25 = c("Never" = 1, "A few times a year" = 2, "Monthly" = 3, "Weekly" = 4, "Daily" = 5), 
+    q26_01 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+               "Agree" = 4, "Strongly agree" = 5), 
+    q26_02 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+               "Agree" = 4, "Strongly agree" = 5), 
+    q26_03 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+               "Agree" = 4, "Strongly agree" = 5), 
+    q26_04 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+               "Agree" = 4, "Strongly agree" = 5), 
+    q26_05 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+               "Agree" = 4, "Strongly agree" = 5), 
+    q26_06 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+               "Agree" = 4, "Strongly agree" = 5), 
+    q26_07 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+               "Agree" = 4, "Strongly agree" = 5), 
+    q26_08 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+               "Agree" = 4, "Strongly agree" = 5), 
+    q26_09 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+               "Agree" = 4, "Strongly agree" = 5), 
+    q26_10 = c("Strongly disagree" = 1, "Disagree" = 2, "Neither agree nor disagree" = 3, 
+               "Agree" = 4, "Strongly agree" = 5)
+  ) |>
+  
+  ## create dummies
+#  dummy_cols(select_columns = c("q18_01", "q18_02", "q18_03", "q18_04", "q18_05", 
+#                                "q18_06", "q18_07", "q18_08", "q18_09",
+#                                "q19_01", "q19_02", "q19_03", "q19_04", "q19_05", 
+#                                "q19_06", "q19_07", "q19_08", "q19_09", "q19_10", 
+#                                "q19_11", "q19_12", "q19_13", "q19_14", 
+#                                "q20_01", "q20_02", "q20_03", "q20_04", "q20_05", 
+#                                "q20_06", "q20_07", "q20_08", "q20_09", "q20_10", 
+#                                "q20_11", "q20_12", "q20_13", "q20_14", 
+#                                "q20_15", 
+#                                "q26_01", "q26_02", "q26_03", "q26_04", "q26_05", 
+#                                "q26_06", "q26_07", "q26_08", "q26_09", "q26_10"), 
+#             ignore_na = TRUE,
+#             remove_selected_columns = TRUE) |> 
+  select(id, resp, quit, anymc, medi, nonpro, catcap, rural, 
+         q1, q2, q3a, q3b, q4, q10a, q11, q12, q16, q17, 
+         starts_with("q18_"), starts_with("q19_"), 
+         starts_with("q20_"), q23, q24, q25, 
+         starts_with("q26_")) |> 
+  mutate(across(c(quit, anymc, medi, nonpro, catcap, rural, 
+                  q1, q2, q3a, q3b, q4, q10a, q11, q12, q16, 
+                  q17, q23, q24, q25), 
+                ~ labelled::to_factor(.))) 
+# |> 
+#  mutate(across(c(starts_with("q18_"), starts_with("q19_"), 
+#                  starts_with("q20_"), starts_with("q26_")), 
+#                ~ as.numeric(.)))
+
+## generate survey weights
+wgt1 <- glm(resp ~ anymc + medi + catcap + rural + nonpro, 
+            family = "binomial", 
+            data = dat)
+
+dat <- dat |> 
+  mutate(pred = predict(wgt1, dat, type = "response")) |> 
+  mutate(svy_weight = 1/pred)
+
+write_rds(
+  dat, 
+  here("data", "AdTurn_clean.rds")
+)
+
+write_dta(
+  dat, 
+  here("data", "AdTurn_clean.dta")
+)
+
+rm(wgt1)
+```
+
+
+- Join data from Administrative Turnover questionnaire to administrator and facilities data collected from ODHS.
+- categorize continuous variables and recode as necessary
+- turn categorical variables into factors
+- dummy subscale variables
+
+
+**Impute data**
+
+```{r}
+#| label: impute data
+#| include: false
+#| eval: false
+
+rm(list = ls())
+
+## Detect core count
+nCores <- min(parallel::detectCores(), 8)
+## Used by parallel::mclapply() as default
+options(mc.cores = nCores)
+## Used by doParallel as default
+options(cores = nCores)
+## Register doParallel as the parallel backend with foreach
+## http://stackoverflow.com/questions/28989855/the-difference-between-domc-and-doparallel-in-r
+doParallel::registerDoParallel(cores = nCores)
+## Report multicore use
+cat("### Using", foreach::getDoParWorkers(), "cores\n")
+cat("### Using", foreach::getDoParName(), "as backend\n")
+
+dat.org <- read_rds(here("data", "AdTurn_clean.rds")) 
+
+dat.resp <- dat.org |>
+  filter(resp == 1) 
+
+dat.mi <- mice(dat.resp |> mutate(across(c(starts_with("q19_"), starts_with("q20_"), starts_with("q26_")), ~ as.integer(.))), 
+               meth = 'pmm')
+
+dat.cmp <- complete(dat.mi, 1)
+
+rm(nCores)
+
+save.image(here("data", "adTurn_analysis.RData"))
+```
+
+
+```{r}
+#| label: load image
+
+rm(list = ls())
+
+load(here("data", "adTurn_analysis.RData"))
+```
+
+
+**Demographic table**
+
+```{r}
+#| label: demographic table
+dat.cmp |> 
+  filter(resp == 1) |> 
+  select(quit, q1, q2, q3a, q3b, q4, catcap, rural, anymc, medi) |> 
+  mutate(across(everything(), ~ labelled::to_factor(.))) |> 
+  tbl_summary(by = quit, 
+              missing_text = "(Missing)") |> 
+  add_overall() |> 
+  add_difference() |> 
+  add_p()
+```
+
+
+**Run CFAs and extract factor loadings**
+
+[https://sites.education.miami.edu/statsu/2020/10/12/steps-of-conducting-confirmatory-factor-analysis-cfa-in-r/](https://sites.education.miami.edu/statsu/2020/10/12/steps-of-conducting-confirmatory-factor-analysis-cfa-in-r/)
+
+[https://search.r-project.org/CRAN/refmans/semTools/html/runMI.html](https://search.r-project.org/CRAN/refmans/semTools/html/runMI.html)
+
+```{r}
+#| label: CFAs
+
+rm(dat)
+dat <- dat.cmp
+
+## define the model
+## Satisfaction with job security: q19_cfa1
+## Satisfaction with compensation: q19_cfa2
+## Growth satisfaction: q19_cfa3
+## Social satisfaction: q19_cfa4
+## Supervisory satisfaction: q19_cfa5
+
+q19.path <- '
+q19_cfa1 = ~ q19_01 + q19_11 
+q19_cfa2 = ~ q19_02 + q19_09 
+q19_cfa3 = ~ q19_03 + q19_06 + q19_10 + q19_13
+q19_cfa4 = ~ q19_04 + q19_07 + q19_12
+q19_cfa5 = ~ q19_05 + q19_08 + q19_14
+'
+
+## fit the model
+q19.cfa <- cfa(q19.path, data = dat.cmp)
+
+## examine the model
+## summary(q19.cfa, fit.measures = TRUE)
+## modindices(q19.cfa, sort = TRUE, maximum.number=10)
+
+dat <- dat |> 
+  cbind(lavPredict(q19.cfa)) |> 
+  rename("q19_cfa_job_security" = q19_cfa1, 
+         "q19_cfa_compensation" = q19_cfa2, 
+         "q19_cfa_growth" = q19_cfa3, 
+         "q19_cfa_socializing" = q19_cfa4, 
+         "q19_cfa_supervision" = q19_cfa5)
+
+################################################################################
+## reverse code 'intent to quit' variables per iic
+# data.rc <- reverse.code(keys = c(1,1,1,1,1, 1,1,1,1,1, -1,1,1,-1,-1), 
+#                items = select(data, starts_with("q20"))) |> 
+#   as.tibble() |> 
+#   rename(q20_11 = `q20_11-`, q20_14 = `q20_14-`, q20_15 = `q20_15-`)
+
+## define the model
+## Organizational commitment: q20_cfa1
+## Perceived organizational support: q20_cfa2
+## Perceived job security: q20_cfa3
+## Intent to quit: q20_cfa4
+
+q20.path <- '
+q20_cfa1 = ~ q20_01 + q20_03 + q20_06 + q20_07 + q20_09 + q20_12 + q20_13
+q20_cfa2 = ~ q20_02 + q20_04 + q20_08
+q20_cfa3 = ~ q20_05 + q20_10
+q20_cfa4 = ~ q20_11 + q20_14 + q20_15
+'
+
+## fit the model
+q20.cfa <- cfa(q20.path, data = dat.cmp)
+
+## examine the model
+## summary(q20.cfa, fit.measures = TRUE)
+## modindices(q20.cfa, sort = TRUE, maximum.number=10)
+
+dat <- dat |> 
+  cbind(lavPredict(q20.cfa)) |> 
+  rename("q20_cfa_organizational_commitment" = q20_cfa1, 
+         "q20_cfa_org_support" = q20_cfa2, 
+         "q20_cfa_job_security" = q20_cfa3, 
+         "q20_cfa_intent_to_quit" = q20_cfa4)
+  
+
+################################################################################
+## define the model
+## Job stress scale: q20_cfa1
+q26.path <- '
+q26_cfa1 =~ q26_01 + q26_02 + q26_03 + q26_04 + q26_05 + q26_06 + q26_07 + q26_08 + q26_09 + q26_10
+'
+
+## fit the model
+q26.cfa <- cfa(q26.path, data = dat.cmp)
+
+## examine the model
+## summary(q26.cfa, fit.measures = TRUE)
+## modindices(q26.cfa, sort = TRUE, maximum.number=10)
+
+dat <- dat |> 
+  cbind(lavPredict(q26.cfa)) |> 
+  rename("q26_cfa_job_stress" = q26_cfa1)
+
+rm(q19.path, q19.cfa, q20.path, q20.cfa, q26.path, q26.cfa)
+```
+
+
+**Run EFAs and extract factor loadings**
+
+[https://www.geo.fu-berlin.de/en/v/soga/Geodata-analysis/factor-analysis/A-simple-example-of-FA/index.html](https://www.geo.fu-berlin.de/en/v/soga/Geodata-analysis/factor-analysis/A-simple-example-of-FA/index.html)
+
+```{r}
+#| label: EFAs
+
+################################################################################
+q19.cor <- dat.cmp |> 
+  select(starts_with("q19_")) |> 
+  mutate(across(everything(), ~ as.integer(.))) |> 
+  cor()
+
+# fa.parallel(q19.cor, n.obs = 203, fa = "both")
+
+q19.efa <- factanal(dat.cmp |> select(starts_with("q19_")) |> mutate(across(everything(), ~as.integer(.))),
+         factors = 5,
+         rotation = "promax", 
+         scores = "regression")
+
+dat <- dat |> 
+  cbind(q19.efa$scores) |> 
+  rename("q19_efa_job_security" = Factor1, 
+         "q19_efa_compensation" = Factor2, 
+         "q19_efa_growth" = Factor3, 
+         "q19_efa_socializing" = Factor4, 
+         "q19_efa_supervision" = Factor5)
+
+################################################################################
+q20.cor <- dat.cmp |> 
+  select(starts_with("q20_")) |> 
+  mutate(across(everything(), ~ as.integer(.))) |> 
+  cor()
+
+# fa.parallel(q20.cor, n.obs = 203, fa = "both")
+
+q20.efa <- factanal(dat.cmp |> select(starts_with("q20_")) |> mutate(across(everything(), ~as.integer(.))),
+         factors = 3,
+         rotation = "promax", 
+         scores = "regression")
+
+dat <- dat |> 
+  cbind(q20.efa$scores) |> 
+  rename("q20_efa_org_commitment" = Factor1,
+         "q20_efa_necessity" = Factor3, 
+         "q20_efa_intent_to_quit" = Factor2)
+
+################################################################################
+
+q26.cor <- dat.cmp |> 
+  select(starts_with("q26_")) |> 
+  mutate(across(everything(), ~ as.integer(.))) |> 
+  cor()
+
+# fa.parallel(q26.cor, n.obs = 203, fa = "both")
+
+q26.efa <- factanal(dat.cmp |> select(starts_with("q26_")) |> mutate(across(everything(), ~as.integer(.))),
+         factors = 2,
+         rotation = "promax", 
+         scores = "regression")
+
+dat <- dat |> 
+  cbind(q26.efa$scores) |> 
+  rename("q26_efa_time_stress" = Factor2, 
+         "q26_efa_anxiety" = Factor1)
+
+rm(q19.cor, q19.efa, q20.cor, q20.efa, q26.cor, q26.efa)
+```
+
+
+**I'm a model, you know what I mean, and I do my little turn on the catwalk**
+
+```{r}
+#| label: models - q19
+
+m19_d <- glm(quit ~ q1 + q2 + q3a + q3b + q4 + q17, 
+             data = dat, 
+             family = "binomial")
+
+m19_cfa <-
+  glm(
+    quit ~ q1 + q2 + q3a + q3b + q4 + q17 + q19_cfa_job_security + q19_cfa_compensation + q19_cfa_growth + q19_cfa_socializing + q19_cfa_supervision,
+    data = dat,
+    family = "binomial"
+  )
+
+m19_efa <-
+  glm(
+    quit ~ q1 + q2 + q3a + q3b + q4 + q17 + q19_efa_job_security + q19_efa_compensation + q19_efa_growth + q19_efa_socializing + q19_efa_supervision,
+    data = dat,
+    family = "binomial"
+  )
+
+t19_1 <- tbl_regression(m19_d, exponentiate = TRUE)
+t19_2 <- tbl_regression(m19_cfa, exponentiate = TRUE)
+t19_3 <- tbl_regression(m19_efa, exponentiate = TRUE)
+
+tbl_merge(tbls = list(t19_1, t19_2, t19_3))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
