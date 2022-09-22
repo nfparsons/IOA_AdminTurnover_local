@@ -659,3 +659,21 @@ quietly: putexcel A1 = matrix(alpha)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+#| label: clean up temp folder
+
+unlink("temp/*")
+```
+
+
